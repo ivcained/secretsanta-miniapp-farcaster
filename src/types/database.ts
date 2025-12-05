@@ -62,7 +62,13 @@ export interface Database {
           max_participants: number;
           join_deadline: string;
           reveal_date: string;
-          status: "open" | "matching" | "active" | "revealed" | "completed";
+          status:
+            | "open"
+            | "matching"
+            | "active"
+            | "revealing"
+            | "revealed"
+            | "completed";
           created_at: string;
         };
         Insert: {
@@ -77,7 +83,13 @@ export interface Database {
           max_participants?: number;
           join_deadline: string;
           reveal_date: string;
-          status?: "open" | "matching" | "active" | "revealed" | "completed";
+          status?:
+            | "open"
+            | "matching"
+            | "active"
+            | "revealing"
+            | "revealed"
+            | "completed";
           created_at?: string;
         };
         Update: {
@@ -92,7 +104,13 @@ export interface Database {
           max_participants?: number;
           join_deadline?: string;
           reveal_date?: string;
-          status?: "open" | "matching" | "active" | "revealed" | "completed";
+          status?:
+            | "open"
+            | "matching"
+            | "active"
+            | "revealing"
+            | "revealed"
+            | "completed";
           created_at?: string;
         };
       };
@@ -203,7 +221,13 @@ export interface Database {
       [_ in never]: never;
     };
     Enums: {
-      chain_status: "open" | "matching" | "active" | "revealed" | "completed";
+      chain_status:
+        | "open"
+        | "matching"
+        | "active"
+        | "revealing"
+        | "revealed"
+        | "completed";
       gift_type: "crypto" | "nft" | "message";
     };
   };

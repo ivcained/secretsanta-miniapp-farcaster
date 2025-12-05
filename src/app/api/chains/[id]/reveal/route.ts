@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "~/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
+import type { GiftChain } from "@/types/database";
 
 /**
  * POST /api/chains/[id]/reveal
@@ -22,18 +23,20 @@ export async function POST(
     }
 
     // Get chain details
-    const { data: chain, error: chainError } = await supabase
+    const { data: chainData, error: chainError } = await supabaseAdmin
       .from("gift_chains")
       .select("*")
       .eq("id", chainId)
       .single();
 
-    if (chainError || !chain) {
+    if (chainError || !chainData) {
       return NextResponse.json(
         { success: false, error: "Chain not found" },
         { status: 404 }
       );
     }
+
+    const chain = chainData as GiftChain;
 
     // Check if reveal date has passed
     const revealDate = new Date(chain.reveal_date);
@@ -63,14 +66,14 @@ export async function POST(
 
     // Update chain status to revealing
     if (chain.status !== "revealing") {
-      await supabase
+      await supabaseAdmin
         .from("gift_chains")
         .update({ status: "revealing" })
         .eq("id", chainId);
     }
 
     // Get all gifts in this chain and reveal them
-    const { data: gifts, error: giftsError } = await supabase
+    const { data: gifts, error: giftsError } = await supabaseAdmin
       .from("gifts")
       .select("*")
       .eq("chain_id", chainId);
@@ -83,11 +86,11 @@ export async function POST(
     }
 
     // Update all gifts to revealed status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from("gifts")
       .update({
         is_revealed: true,
-        status: "revealed",
+        revealed_at: new Date().toISOString(),
       })
       .eq("chain_id", chainId);
 
@@ -99,7 +102,7 @@ export async function POST(
     }
 
     // Update chain status to completed
-    await supabase
+    await supabaseAdmin
       .from("gift_chains")
       .update({ status: "completed" })
       .eq("id", chainId);
@@ -139,19 +142,20 @@ export async function GET(
     }
 
     // Get chain details
-    const { data: chain, error: chainError } = await supabase
+    const { data: chainData, error: chainError } = await supabaseAdmin
       .from("gift_chains")
       .select("*")
       .eq("id", chainId)
       .single();
 
-    if (chainError || !chain) {
+    if (chainError || !chainData) {
       return NextResponse.json(
         { success: false, error: "Chain not found" },
         { status: 404 }
       );
     }
 
+    const chain = chainData as GiftChain;
     const revealDate = new Date(chain.reveal_date);
     const now = new Date();
     const isRevealed =
@@ -161,7 +165,7 @@ export async function GET(
     // If user FID provided, get their specific gift assignments
     let userGifts = null;
     if (fid && isRevealed) {
-      const { data: gifts } = await supabase
+      const { data: gifts } = await supabaseAdmin
         .from("gifts")
         .select(
           `
