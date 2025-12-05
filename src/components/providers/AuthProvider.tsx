@@ -159,45 +159,98 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setError(null);
 
     try {
+      console.log("[Auth] Starting sign-in process...");
+
       // Generate nonce for SIWF
       const nonce = await generateNonce();
       if (!nonce) throw new Error("Unable to generate nonce");
+      console.log("[Auth] Generated nonce:", nonce);
 
       // Use MiniKit's signIn
+      console.log("[Auth] Calling MiniKit signIn...");
       const result = await miniKitSignIn({ nonce });
+      console.log(
+        "[Auth] MiniKit signIn result:",
+        JSON.stringify(result, null, 2)
+      );
 
       if (result === false) {
         setError("Sign-in was cancelled or failed");
         return;
       }
 
-      // Verify the sign-in message
-      const appClient = createAppClient({
-        ethereum: viemConnector(),
-      });
+      // Check if result has fid directly (some SDK versions include it)
+      let fid: number | undefined;
 
-      const verifyResult = await appClient.verifySignInMessage({
-        message: result.message,
-        signature: result.signature as `0x${string}`,
-        domain: new URL(window.location.origin).hostname,
-        nonce: nonce,
-        acceptAuthAddress: true,
-      });
-
-      if (!verifyResult.success) {
-        setError("Failed to verify sign-in");
-        return;
+      // Try to get FID from the result directly first
+      if (result && typeof result === "object" && "fid" in result) {
+        fid = (result as { fid?: number }).fid;
+        console.log("[Auth] FID found directly in result:", fid);
       }
 
-      // Extract FID from the verified result
-      const fid = verifyResult.fid;
+      // If no FID yet, try to verify the sign-in message
+      if (!fid && result.message && result.signature) {
+        console.log("[Auth] Creating app client for verification...");
+        const appClient = createAppClient({
+          ethereum: viemConnector(),
+        });
+
+        console.log("[Auth] Verifying sign-in message...");
+        console.log("[Auth] Message:", result.message);
+        console.log("[Auth] Domain:", new URL(window.location.origin).hostname);
+
+        try {
+          const verifyResult = await appClient.verifySignInMessage({
+            message: result.message,
+            signature: result.signature as `0x${string}`,
+            domain: new URL(window.location.origin).hostname,
+            nonce: nonce,
+            acceptAuthAddress: true,
+          });
+          console.log(
+            "[Auth] Verify result:",
+            JSON.stringify(verifyResult, null, 2)
+          );
+
+          if (verifyResult.success && verifyResult.fid) {
+            fid = verifyResult.fid;
+            console.log("[Auth] FID from verification:", fid);
+          } else {
+            console.error(
+              "[Auth] Verification failed or no FID:",
+              verifyResult
+            );
+          }
+        } catch (verifyError) {
+          console.error("[Auth] Verification error:", verifyError);
+          // Continue to try other methods
+        }
+      }
+
+      // Try to get FID from SDK context as fallback
+      if (!fid) {
+        try {
+          const context = await sdk.context;
+          console.log("[Auth] SDK context:", JSON.stringify(context, null, 2));
+          if (context?.user?.fid) {
+            fid = context.user.fid;
+            console.log("[Auth] FID from SDK context:", fid);
+          }
+        } catch (contextError) {
+          console.error("[Auth] Error getting SDK context:", contextError);
+        }
+      }
 
       if (!fid) {
-        setError("No FID found in sign-in result");
+        console.error("[Auth] Could not extract FID from any source");
+        setError(
+          "Could not get your Farcaster ID. Please try again or ensure you're using the Farcaster app."
+        );
         return;
       }
 
       // Validate with Neynar and get user data
+      console.log("[Auth] Validating user with Neynar API for FID:", fid);
       const validateResponse = await fetch("/api/user/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -205,9 +258,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       const validateData = await validateResponse.json();
+      console.log("[Auth] Neynar validation response:", validateData);
 
       if (!validateResponse.ok) {
-        setError(validateData.error || "Failed to validate user");
+        // More specific error message based on the response
+        const errorMsg = validateData.error || "Failed to validate user";
+        console.error("[Auth] Validation failed:", errorMsg);
+
+        // If it's a "user not found" error, provide more context
+        if (errorMsg.includes("not found")) {
+          setError(
+            `Unable to find your Farcaster profile (FID: ${fid}). This may be a temporary issue with the Neynar API. Please try again later.`
+          );
+        } else {
+          setError(errorMsg);
+        }
         return;
       }
 
@@ -218,27 +283,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
         displayName: validateData.user?.displayName || null,
         pfpUrl: validateData.user?.pfpUrl || null,
         custodyAddress: validateData.user?.custodyAddress || null,
-        neynarScore: validateData.score,
-        isValidScore: validateData.valid,
+        neynarScore: validateData.score || 0,
+        isValidScore: validateData.valid || false,
         verifiedAddresses: {
           ethAddresses: [],
           solAddresses: [],
         },
       };
 
+      console.log("[Auth] Created user object:", newUser);
       setUser(newUser);
       localStorage.setItem("santa_chain_user", JSON.stringify(newUser));
 
       // Show warning if score is too low
       if (!validateData.valid) {
         setError(
-          `Your Neynar score (${validateData.score.toFixed(
+          `Your Neynar score (${(validateData.score || 0).toFixed(
             2
           )}) is below the minimum required (${MIN_SCORE}). You can view chains but cannot participate.`
         );
+      } else {
+        console.log("[Auth] Sign-in successful!");
       }
     } catch (err) {
-      console.error("Sign in error:", err);
+      console.error("[Auth] Sign in error:", err);
       setError(
         `Sign-in failed: ${
           err instanceof Error ? err.message : "Unknown error"

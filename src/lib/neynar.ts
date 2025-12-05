@@ -47,33 +47,45 @@ export interface UserValidationResult {
  */
 export async function getUserByFid(fid: number): Promise<NeynarUser | null> {
   if (!NEYNAR_API_KEY) {
-    console.error("NEYNAR_API_KEY is not configured");
+    console.error("NEYNAR_API_KEY is not configured - check .env.local");
     return null;
   }
 
+  const url = `${NEYNAR_BASE_URL}/v2/farcaster/user/bulk?fids=${fid}`;
+  console.log(`[Neynar] Fetching user with FID: ${fid}`);
+
   try {
-    const response = await fetch(
-      `${NEYNAR_BASE_URL}/v2/farcaster/user/bulk?fids=${fid}`,
-      {
-        method: "GET",
-        headers: {
-          "x-api-key": NEYNAR_API_KEY,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "x-api-key": NEYNAR_API_KEY,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (!response.ok) {
+      const errorText = await response.text();
       console.error(
-        `Neynar API error: ${response.status} ${response.statusText}`
+        `[Neynar] API error: ${response.status} ${response.statusText}`,
+        errorText
       );
       return null;
     }
 
     const data: NeynarBulkUsersResponse = await response.json();
-    return data.users?.[0] || null;
+    console.log(
+      `[Neynar] Response for FID ${fid}:`,
+      JSON.stringify(data, null, 2)
+    );
+
+    if (!data.users || data.users.length === 0) {
+      console.error(`[Neynar] No user found for FID: ${fid}`);
+      return null;
+    }
+
+    return data.users[0];
   } catch (error) {
-    console.error("Error fetching user from Neynar:", error);
+    console.error("[Neynar] Error fetching user:", error);
     return null;
   }
 }
@@ -126,30 +138,51 @@ export async function getUsersByFids(fids: number[]): Promise<NeynarUser[]> {
 export async function validateUserScore(
   fid: number
 ): Promise<UserValidationResult> {
+  console.log(`[Neynar] Validating user score for FID: ${fid}`);
+
   const user = await getUserByFid(fid);
 
   if (!user) {
+    console.error(`[Neynar] User not found for FID: ${fid}`);
+
+    // Check if Neynar API key might be invalid
+    if (!NEYNAR_API_KEY) {
+      return {
+        isValid: false,
+        score: 0,
+        user: null,
+        error:
+          "Neynar API key not configured. Please contact the app administrator.",
+      };
+    }
+
     return {
       isValid: false,
       score: 0,
       user: null,
-      error: "User not found",
+      error: `User with FID ${fid} not found in Neynar. This may be a new account or the API may be temporarily unavailable.`,
     };
   }
 
   const score = user.experimental?.neynar_user_score || 0;
+  console.log(
+    `[Neynar] User ${user.username} (FID: ${fid}) has score: ${score}`
+  );
 
   if (score < MIN_USER_SCORE) {
     return {
       isValid: false,
       score,
       user,
-      error: `User score ${score.toFixed(
+      error: `Your Neynar score (${score.toFixed(
         2
-      )} is below minimum threshold of ${MIN_USER_SCORE}. Please improve your Farcaster activity to participate.`,
+      )}) is below the minimum threshold of ${MIN_USER_SCORE}. Please improve your Farcaster activity to participate.`,
     };
   }
 
+  console.log(
+    `[Neynar] User ${user.username} validated successfully with score ${score}`
+  );
   return {
     isValid: true,
     score,

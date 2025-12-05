@@ -12,17 +12,40 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { fid } = body;
 
-    if (!fid || typeof fid !== "number") {
+    console.log(
+      `[API /user/validate] Received validation request for FID: ${fid}`
+    );
+
+    if (!fid) {
+      console.error("[API /user/validate] No FID provided");
+      return NextResponse.json({ error: "FID is required" }, { status: 400 });
+    }
+
+    // Convert to number if string
+    const fidNumber = typeof fid === "string" ? parseInt(fid, 10) : fid;
+
+    if (isNaN(fidNumber) || fidNumber <= 0) {
+      console.error(`[API /user/validate] Invalid FID: ${fid}`);
       return NextResponse.json(
-        { error: "Invalid FID provided" },
+        { error: `Invalid FID provided: ${fid}` },
         { status: 400 }
       );
     }
 
+    console.log(`[API /user/validate] Validating FID: ${fidNumber}`);
+
     // Validate user score with Neynar
-    const validation = await validateUserScore(fid);
+    const validation = await validateUserScore(fidNumber);
+
+    console.log(
+      `[API /user/validate] Validation result:`,
+      JSON.stringify(validation, null, 2)
+    );
 
     if (!validation.isValid) {
+      console.log(
+        `[API /user/validate] User validation failed: ${validation.error}`
+      );
       return NextResponse.json(
         {
           valid: false,
