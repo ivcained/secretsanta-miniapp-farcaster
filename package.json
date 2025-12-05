@@ -1,5 +1,5 @@
 {
-  "name": "mini-app-full-demo",
+  "name": "secret-santa-chain",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -15,10 +15,11 @@
     "@farcaster/auth-kit": "^0.8.1",
     "@farcaster/miniapp-core": "^0.3.8",
     "@farcaster/miniapp-node": "^0.1.8",
-    "@farcaster/miniapp-sdk": "^0.1.9",
-    "@farcaster/miniapp-wagmi-connector": "^1.0.0",
+    "@farcaster/miniapp-sdk": "^0.2.1",
+    "@farcaster/miniapp-wagmi-connector": "^1.1.0",
     "@farcaster/quick-auth": "^0.0.8",
     "@radix-ui/react-label": "^2.1.7",
+    "@supabase/supabase-js": "^2.47.0",
     "@tanstack/react-query": "^5.85.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -31,7 +32,8 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "viem": "^2.37.1",
-    "wagmi": "^2.16.9"
+    "wagmi": "^2.16.9",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
