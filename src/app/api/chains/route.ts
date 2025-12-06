@@ -231,12 +231,6 @@ export async function POST(request: NextRequest) {
     if (joinError) {
       console.error("Error auto-joining creator:", joinError);
       // Don't fail the request, just log the error
-    } else {
-      // Update current_participants count
-      await supabaseAdmin
-        .from("gift_chains")
-        .update({ current_participants: 1 })
-        .eq("id", chain.id);
     }
 
     // Award points for creating a chain

@@ -185,27 +185,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Update current_participants count
-    const { data: currentChain } = await supabaseAdmin
-      .from("gift_chains")
-      .select("current_participants")
-      .eq("id", id)
-      .single();
+    // Get actual participant count from chain_participants table
+    const { count: participantCount } = await supabaseAdmin
+      .from("chain_participants")
+      .select("*", { count: "exact", head: true })
+      .eq("chain_id", id);
 
-    const newParticipantCount = (currentChain?.current_participants || 0) + 1;
-
-    if (currentChain) {
-      await supabaseAdmin
-        .from("gift_chains")
-        .update({
-          current_participants: newParticipantCount,
-        })
-        .eq("id", id);
-    }
+    const newParticipantCount = participantCount || 1;
+    console.log(`Chain ${id} now has ${newParticipantCount} participants`);
 
     // Check if we should auto-trigger matching
     // Auto-match when minimum participants is reached (default min is 2)
     const minParticipants = chain.min_participants || 2;
+    console.log(
+      `Min participants required: ${minParticipants}, current: ${newParticipantCount}`
+    );
+
     if (newParticipantCount >= minParticipants && chain.status === "open") {
       console.log(
         `Auto-triggering matching for chain ${id} with ${newParticipantCount} participants`

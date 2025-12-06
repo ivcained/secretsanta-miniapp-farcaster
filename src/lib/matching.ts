@@ -69,6 +69,8 @@ export async function runMatching(chainId: string): Promise<{
   error?: string;
 }> {
   try {
+    console.log(`[Matching] Starting matching for chain ${chainId}`);
+
     // Get all participants for this chain
     const { data: participants, error: fetchError } = await supabaseAdmin
       .from("chain_participants")
@@ -76,11 +78,17 @@ export async function runMatching(chainId: string): Promise<{
       .eq("chain_id", chainId);
 
     if (fetchError) {
+      console.error(`[Matching] Failed to fetch participants:`, fetchError);
       return {
         success: false,
         error: `Failed to fetch participants: ${fetchError.message}`,
       };
     }
+
+    console.log(
+      `[Matching] Found ${participants?.length || 0} participants:`,
+      participants
+    );
 
     if (!participants || participants.length < 2) {
       return {
@@ -115,31 +123,51 @@ export async function runMatching(chainId: string): Promise<{
       })
     );
 
+    console.log(
+      `[Matching] Assignments created:`,
+      Array.from(assignments.entries())
+    );
+
     for (const update of updates) {
-      const { error: updateError } = await supabaseAdmin
+      console.log(
+        `[Matching] Updating FID ${update.user_fid} -> recipient FID ${update.assigned_recipient_fid}`
+      );
+      const { error: updateError, data: updateData } = await supabaseAdmin
         .from("chain_participants")
         .update({ assigned_recipient_fid: update.assigned_recipient_fid })
         .eq("chain_id", update.chain_id)
-        .eq("user_fid", update.user_fid);
+        .eq("user_fid", update.user_fid)
+        .select();
 
       if (updateError) {
         console.error(
-          `Failed to update assignment for FID ${update.user_fid}:`,
+          `[Matching] Failed to update assignment for FID ${update.user_fid}:`,
           updateError
+        );
+      } else {
+        console.log(
+          `[Matching] Successfully updated assignment for FID ${update.user_fid}:`,
+          updateData
         );
       }
     }
 
     // Update chain status to 'active'
+    console.log(`[Matching] Updating chain ${chainId} status to 'active'`);
     const { error: statusError } = await supabaseAdmin
       .from("gift_chains")
       .update({ status: "active" })
       .eq("id", chainId);
 
     if (statusError) {
-      console.error("Failed to update chain status:", statusError);
+      console.error("[Matching] Failed to update chain status:", statusError);
+    } else {
+      console.log(`[Matching] Chain ${chainId} status updated to 'active'`);
     }
 
+    console.log(
+      `[Matching] Matching completed successfully for chain ${chainId}`
+    );
     return { success: true, assignments };
   } catch (error) {
     console.error("Error running matching:", error);
