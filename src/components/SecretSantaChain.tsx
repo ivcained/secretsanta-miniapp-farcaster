@@ -10,13 +10,15 @@ import { Button } from "~/components/ui/Button";
 import { ChainCard, CreateChainModal } from "~/components/chains";
 import { GiftCard, SendGiftModal, ThankYouModal } from "~/components/gifts";
 import { Snowfall } from "~/components/Snowfall";
+import { SupportDeveloperModal } from "~/components/SupportDeveloperModal";
+import { HowItWorks } from "~/components/HowItWorks";
 import { useChristmasSounds } from "~/lib/sounds";
 import {
   getJoinChainShareParams,
   getCreateChainShareParams,
 } from "~/lib/share";
 
-type TabType = "chains" | "my-gifts" | "profile";
+type TabType = "chains" | "my-gifts" | "how-it-works" | "profile";
 
 interface GiftChain {
   id: string;
@@ -110,6 +112,7 @@ export default function SecretSantaChain() {
     recipientUsername?: string;
   } | null>(null);
   const [thankYouModal, setThankYouModal] = useState<string | null>(null);
+  const [showSupportModal, setShowSupportModal] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
 
   const ctx = frameContext?.context as Record<string, unknown> | undefined;
@@ -309,29 +312,34 @@ export default function SecretSantaChain() {
       {/* Christmas Tab Navigation */}
       <div className="px-4 mb-4 relative z-10">
         <div className="tab-christmas">
-          {(["chains", "my-gifts", "profile"] as TabType[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                sounds.playClick();
-                setActiveTab(tab);
-              }}
-              className={`tab-christmas-item flex-1 justify-center ${
-                activeTab === tab ? "active" : ""
-              }`}
-            >
-              {tab === "chains" && <span>🎄</span>}
-              {tab === "my-gifts" && <span>🎁</span>}
-              {tab === "profile" && <span>👤</span>}
-              <span className="hidden sm:inline">
-                {tab === "chains"
-                  ? "Chains"
-                  : tab === "my-gifts"
-                  ? "Gifts"
-                  : "Profile"}
-              </span>
-            </button>
-          ))}
+          {(["chains", "my-gifts", "how-it-works", "profile"] as TabType[]).map(
+            (tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  sounds.playClick();
+                  setActiveTab(tab);
+                }}
+                className={`tab-christmas-item flex-1 justify-center ${
+                  activeTab === tab ? "active" : ""
+                }`}
+              >
+                {tab === "chains" && <span>🎄</span>}
+                {tab === "my-gifts" && <span>🎁</span>}
+                {tab === "how-it-works" && <span>❓</span>}
+                {tab === "profile" && <span>👤</span>}
+                <span className="hidden sm:inline">
+                  {tab === "chains"
+                    ? "Chains"
+                    : tab === "my-gifts"
+                    ? "Gifts"
+                    : tab === "how-it-works"
+                    ? "Help"
+                    : "Profile"}
+                </span>
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -507,34 +515,68 @@ export default function SecretSantaChain() {
           </div>
         )}
 
+        {activeTab === "how-it-works" && <HowItWorks />}
+
         {activeTab === "profile" && (
-          <div className="candy-cane-border">
-            <div className="candy-cane-border-inner p-6 text-center bg-gradient-to-b from-red-50 to-white">
-              <div className="relative inline-block mb-4">
-                {user?.pfpUrl && (
-                  <img
-                    src={user.pfpUrl}
-                    alt=""
-                    className="h-20 w-20 rounded-full border-4 border-red-500 shadow-lg"
-                  />
-                )}
-                <div className="absolute -bottom-2 -right-2 text-3xl">🎅</div>
+          <div className="space-y-4">
+            <div className="candy-cane-border">
+              <div className="candy-cane-border-inner p-6 text-center bg-gradient-to-b from-red-50 to-white">
+                <div className="relative inline-block mb-4">
+                  {user?.pfpUrl && (
+                    <img
+                      src={user.pfpUrl}
+                      alt=""
+                      className="h-20 w-20 rounded-full border-4 border-red-500 shadow-lg"
+                    />
+                  )}
+                  <div className="absolute -bottom-2 -right-2 text-3xl">🎅</div>
+                </div>
+                <h2 className="font-bold text-xl text-gray-800">
+                  @{user?.username}
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">FID: {user?.fid}</p>
+                <div className="bg-green-100 rounded-xl p-3 mb-4">
+                  <p className="text-sm text-gray-600">
+                    Quality Score:{" "}
+                    <span className="font-bold text-green-600 text-lg">
+                      {user?.neynarScore?.toFixed(2)} ⭐
+                    </span>
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <AuthButton />
+                </div>
               </div>
-              <h2 className="font-bold text-xl text-gray-800">
-                @{user?.username}
-              </h2>
-              <p className="text-sm text-gray-500 mb-4">FID: {user?.fid}</p>
-              <div className="bg-green-100 rounded-xl p-3 mb-4">
-                <p className="text-sm text-gray-600">
-                  Quality Score:{" "}
-                  <span className="font-bold text-green-600 text-lg">
-                    {user?.neynarScore?.toFixed(2)} ⭐
-                  </span>
-                </p>
+            </div>
+
+            {/* Support Developer Card */}
+            <div className="bg-gradient-to-r from-pink-50 to-red-50 rounded-2xl p-4 border border-pink-200">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-400 to-pink-500 rounded-full flex items-center justify-center text-2xl shadow-lg">
+                  ❤️
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-800">
+                    Support the Developer
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Help keep the magic alive!
+                  </p>
+                </div>
               </div>
-              <div className="mt-4">
-                <AuthButton />
-              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Enjoying Secret Santa Chain? Consider supporting the developer
+                to help pay for servers and keep spreading holiday cheer! 🎄
+              </p>
+              <button
+                onClick={() => {
+                  sounds.playClick();
+                  setShowSupportModal(true);
+                }}
+                className="w-full bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white font-semibold py-3 rounded-xl shadow-lg transition-all hover:scale-[1.02]"
+              >
+                ❤️ Support with USDC
+              </button>
             </div>
           </div>
         )}
@@ -570,6 +612,10 @@ export default function SecretSantaChain() {
               setThankYouModal(null);
             }}
           />
+        )}
+
+        {showSupportModal && (
+          <SupportDeveloperModal onClose={() => setShowSupportModal(false)} />
         )}
       </div>
     </div>
