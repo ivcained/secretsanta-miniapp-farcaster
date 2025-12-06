@@ -9,17 +9,37 @@ interface AuthButtonProps {
 }
 
 export function AuthButton({ className, showScore = true }: AuthButtonProps) {
-  const { user, isAuthenticated, isLoading, error, signIn, signOut } =
-    useAuth();
+  const {
+    user,
+    isAuthenticated,
+    isLoading,
+    isCheckingContext,
+    isInFarcasterApp,
+    error,
+    signIn,
+    signOut,
+  } = useAuth();
 
+  // Show loading state while checking Farcaster context
+  if (isCheckingContext) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </div>
+    );
+  }
+
+  // Show loading state during sign-in
   if (isLoading) {
     return (
       <Button disabled className={className} isLoading={true}>
-        Signing in...
+        {isInFarcasterApp ? "Connecting..." : "Signing in..."}
       </Button>
     );
   }
 
+  // Show user info when authenticated
   if (isAuthenticated && user) {
     return (
       <div className="flex items-center gap-3">
@@ -59,6 +79,23 @@ export function AuthButton({ className, showScore = true }: AuthButtonProps) {
     );
   }
 
+  // If inside Farcaster app but not authenticated, show auto-connecting message
+  // (This shouldn't normally happen as auto-login should occur)
+  if (isInFarcasterApp) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm text-muted-foreground">
+            Connecting to Farcaster...
+          </span>
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+    );
+  }
+
+  // Show sign-in button only when accessed from browser (not inside Farcaster app)
   return (
     <div className="flex flex-col gap-2">
       <Button onClick={signIn} className={className}>

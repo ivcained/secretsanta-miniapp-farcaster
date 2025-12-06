@@ -36,6 +36,8 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   isValidatingScore: boolean;
+  isInFarcasterApp: boolean;
+  isCheckingContext: boolean;
   error: string | null;
   signIn: () => Promise<void>;
   signOut: () => void;
@@ -56,23 +58,125 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidatingScore, setIsValidatingScore] = useState(false);
+  const [isInFarcasterApp, setIsInFarcasterApp] = useState(false);
+  const [isCheckingContext, setIsCheckingContext] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // MiniKit's useAuthenticate hook
   const { signIn: miniKitSignIn } = useAuthenticate();
 
-  // Check for existing session on mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem("santa_chain_user");
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setUser(parsed);
-      } catch (e) {
-        localStorage.removeItem("santa_chain_user");
+  // Helper function to login with FID
+  const loginWithFid = useCallback(async (fid: number): Promise<boolean> => {
+    console.log("[Auth] Logging in with FID:", fid);
+
+    try {
+      // Validate with Neynar and get user data
+      const validateResponse = await fetch("/api/user/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fid }),
+      });
+
+      const validateData = await validateResponse.json();
+      console.log("[Auth] Neynar validation response:", validateData);
+
+      if (!validateResponse.ok) {
+        const errorMsg = validateData.error || "Failed to validate user";
+        console.error("[Auth] Validation failed:", errorMsg);
+        setError(errorMsg);
+        return false;
       }
+
+      // Create user object
+      const newUser: AuthUser = {
+        fid,
+        username: validateData.user?.username || null,
+        displayName: validateData.user?.displayName || null,
+        pfpUrl: validateData.user?.pfpUrl || null,
+        custodyAddress: validateData.user?.custodyAddress || null,
+        neynarScore: validateData.score || 0,
+        isValidScore: validateData.valid || false,
+        verifiedAddresses: {
+          ethAddresses: [],
+          solAddresses: [],
+        },
+      };
+
+      console.log("[Auth] Created user object:", newUser);
+      setUser(newUser);
+      localStorage.setItem("santa_chain_user", JSON.stringify(newUser));
+
+      // Show warning if score is too low
+      if (!validateData.valid) {
+        setError(
+          `Your Neynar score (${(validateData.score || 0).toFixed(
+            2
+          )}) is below the minimum required (${MIN_SCORE}). You can view chains but cannot participate.`
+        );
+      }
+
+      return true;
+    } catch (err) {
+      console.error("[Auth] Login with FID error:", err);
+      setError(
+        `Login failed: ${err instanceof Error ? err.message : "Unknown error"}`
+      );
+      return false;
     }
   }, []);
+
+  // Check for Farcaster context and auto-login on mount
+  useEffect(() => {
+    const checkFarcasterContext = async () => {
+      console.log("[Auth] Checking Farcaster context...");
+      setIsCheckingContext(true);
+
+      // First check localStorage for existing session
+      const storedUser = localStorage.getItem("santa_chain_user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setUser(parsed);
+          console.log("[Auth] Restored user from localStorage:", parsed.fid);
+        } catch (e) {
+          localStorage.removeItem("santa_chain_user");
+        }
+      }
+
+      // Check if we're inside Farcaster app
+      try {
+        const context = await sdk.context;
+        console.log("[Auth] SDK context:", JSON.stringify(context, null, 2));
+
+        if (context?.user?.fid) {
+          console.log(
+            "[Auth] Running inside Farcaster app with FID:",
+            context.user.fid
+          );
+          setIsInFarcasterApp(true);
+
+          // Auto-login if not already logged in
+          if (!storedUser) {
+            setIsLoading(true);
+            await loginWithFid(context.user.fid);
+            setIsLoading(false);
+          }
+        } else {
+          console.log(
+            "[Auth] Not running inside Farcaster app (no context or FID)"
+          );
+          setIsInFarcasterApp(false);
+        }
+      } catch (err) {
+        console.log("[Auth] Error checking Farcaster context:", err);
+        setIsInFarcasterApp(false);
+      }
+
+      setIsCheckingContext(false);
+    };
+
+    checkFarcasterContext();
+  }, [loginWithFid]);
 
   // Validate user's Neynar score
   const validateScore = useCallback(async (): Promise<boolean> => {
@@ -153,13 +257,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }, [user]);
 
-  // Sign in with Farcaster
+  // Sign in with Farcaster (for browser-based access)
   const signIn = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setError(null);
 
     try {
       console.log("[Auth] Starting sign-in process...");
+
+      // First, try to get FID from SDK context (in case we're in Farcaster but context wasn't ready earlier)
+      try {
+        const context = await sdk.context;
+        if (context?.user?.fid) {
+          console.log("[Auth] Found FID in SDK context:", context.user.fid);
+          await loginWithFid(context.user.fid);
+          setIsInFarcasterApp(true);
+          return;
+        }
+      } catch (contextError) {
+        console.log("[Auth] No SDK context available, proceeding with SIWF");
+      }
 
       // Generate nonce for SIWF
       const nonce = await generateNonce();
@@ -249,62 +366,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return;
       }
 
-      // Validate with Neynar and get user data
-      console.log("[Auth] Validating user with Neynar API for FID:", fid);
-      const validateResponse = await fetch("/api/user/validate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fid }),
-      });
-
-      const validateData = await validateResponse.json();
-      console.log("[Auth] Neynar validation response:", validateData);
-
-      if (!validateResponse.ok) {
-        // More specific error message based on the response
-        const errorMsg = validateData.error || "Failed to validate user";
-        console.error("[Auth] Validation failed:", errorMsg);
-
-        // If it's a "user not found" error, provide more context
-        if (errorMsg.includes("not found")) {
-          setError(
-            `Unable to find your Farcaster profile (FID: ${fid}). This may be a temporary issue with the Neynar API. Please try again later.`
-          );
-        } else {
-          setError(errorMsg);
-        }
-        return;
-      }
-
-      // Create user object
-      const newUser: AuthUser = {
-        fid,
-        username: validateData.user?.username || null,
-        displayName: validateData.user?.displayName || null,
-        pfpUrl: validateData.user?.pfpUrl || null,
-        custodyAddress: validateData.user?.custodyAddress || null,
-        neynarScore: validateData.score || 0,
-        isValidScore: validateData.valid || false,
-        verifiedAddresses: {
-          ethAddresses: [],
-          solAddresses: [],
-        },
-      };
-
-      console.log("[Auth] Created user object:", newUser);
-      setUser(newUser);
-      localStorage.setItem("santa_chain_user", JSON.stringify(newUser));
-
-      // Show warning if score is too low
-      if (!validateData.valid) {
-        setError(
-          `Your Neynar score (${(validateData.score || 0).toFixed(
-            2
-          )}) is below the minimum required (${MIN_SCORE}). You can view chains but cannot participate.`
-        );
-      } else {
-        console.log("[Auth] Sign-in successful!");
-      }
+      // Login with the extracted FID
+      await loginWithFid(fid);
+      console.log("[Auth] Sign-in successful!");
     } catch (err) {
       console.error("[Auth] Sign in error:", err);
       setError(
@@ -315,7 +379,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [miniKitSignIn]);
+  }, [miniKitSignIn, loginWithFid]);
 
   // Sign out
   const signOut = useCallback((): void => {
@@ -329,6 +393,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     isAuthenticated: !!user,
     isLoading,
     isValidatingScore,
+    isInFarcasterApp,
+    isCheckingContext,
     error,
     signIn,
     signOut,
