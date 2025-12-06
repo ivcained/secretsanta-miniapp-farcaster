@@ -9,6 +9,8 @@ import { AuthButton } from "~/components/auth/AuthButton";
 import { Button } from "~/components/ui/Button";
 import { ChainCard, CreateChainModal } from "~/components/chains";
 import { GiftCard, SendGiftModal, ThankYouModal } from "~/components/gifts";
+import { Snowfall } from "~/components/Snowfall";
+import { useChristmasSounds } from "~/lib/sounds";
 import {
   getJoinChainShareParams,
   getCreateChainShareParams,
@@ -91,6 +93,7 @@ export default function SecretSantaChain() {
   const frameContext = useFrameContext();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { composeCast } = useComposeCast();
+  const sounds = useChristmasSounds();
   const isValidScore = user?.isValidScore ?? false;
   const [activeTab, setActiveTab] = useState<TabType>("chains");
   const [chains, setChains] = useState<GiftChain[]>([]);
@@ -213,10 +216,13 @@ export default function SecretSantaChain() {
     return (
       <div
         style={safeStyle}
-        className="w-[95%] max-w-lg mx-auto py-12 text-center"
+        className="min-h-screen flex items-center justify-center"
       >
-        <div className="animate-spin text-4xl">🎁</div>
-        <p className="text-muted-foreground mt-4">Loading...</p>
+        <Snowfall />
+        <div className="text-center">
+          <div className="text-6xl animate-bounce mb-4">🎅</div>
+          <p className="text-gray-600 font-medium">Loading the magic...</p>
+        </div>
       </div>
     );
   }
@@ -225,14 +231,19 @@ export default function SecretSantaChain() {
     return (
       <div
         style={safeStyle}
-        className="w-[95%] max-w-lg mx-auto py-12 px-4 text-center"
+        className="min-h-screen flex items-center justify-center px-4"
       >
-        <div className="text-6xl mb-4">🎁</div>
-        <h1 className="text-2xl font-bold mb-2">Secret Santa Chain</h1>
-        <p className="text-muted-foreground mb-6">
-          Anonymous gifting for Farcaster
-        </p>
-        <AuthButton />
+        <Snowfall />
+        <div className="text-center max-w-sm">
+          <h1 className="font-christmas text-5xl text-red-600 mb-2 drop-shadow-lg">
+            Secret Santa
+          </h1>
+          <div className="text-6xl mb-4">🎄🎁🎅</div>
+          <p className="text-gray-700 mb-6 text-lg">
+            Anonymous gifting magic for Farcaster
+          </p>
+          <AuthButton />
+        </div>
       </div>
     );
   }
@@ -241,96 +252,148 @@ export default function SecretSantaChain() {
     return (
       <div
         style={safeStyle}
-        className="w-[95%] max-w-lg mx-auto py-12 px-4 text-center"
+        className="min-h-screen flex items-center justify-center px-4"
       >
-        <div className="text-6xl mb-4">⚠️</div>
-        <h1 className="text-xl font-bold mb-2">Quality Score Required</h1>
-        <p className="text-muted-foreground mb-4">
-          Score: {user?.neynarScore?.toFixed(2) || "N/A"} (need 0.7+)
-        </p>
-        <AuthButton />
+        <Snowfall />
+        <div className="text-center max-w-sm bg-white/90 backdrop-blur rounded-2xl p-6 shadow-xl">
+          <div className="text-5xl mb-4">⚠️🎄</div>
+          <h1 className="text-xl font-bold mb-2 text-gray-800">
+            Quality Score Required
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Score:{" "}
+            <span className="font-bold text-red-500">
+              {user?.neynarScore?.toFixed(2) || "N/A"}
+            </span>
+            <br />
+            <span className="text-sm">(need 0.7+ to join)</span>
+          </p>
+          <AuthButton />
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={safeStyle}>
-      <div className="w-[95%] max-w-lg mx-auto py-4 px-4">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🎁</span>
-            <h1 className="text-lg font-bold">Secret Santa</h1>
-          </div>
+    <div style={safeStyle} className="min-h-screen pb-4">
+      <Snowfall />
+
+      {/* Header */}
+      <div className="relative z-10 pt-4 pb-2 px-4">
+        <div className="flex items-center justify-between">
+          <h1 className="font-christmas text-4xl text-red-600 drop-shadow-md">
+            Secret Santa
+          </h1>
           {user?.pfpUrl && (
             <button
-              onClick={() =>
-                user.fid && sdk.actions.viewProfile({ fid: user.fid })
-              }
+              onClick={() => {
+                sounds.playClick();
+                user.fid && sdk.actions.viewProfile({ fid: user.fid });
+              }}
+              className="relative"
               aria-label="View profile"
             >
+              <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs border-2 border-white">
+                🎄
+              </div>
               <img
                 src={user.pfpUrl}
                 alt="Profile"
-                className="h-8 w-8 rounded-full"
+                className="h-12 w-12 rounded-full border-2 border-red-500 shadow-lg"
               />
             </button>
           )}
         </div>
+      </div>
 
-        <div className="flex gap-2 p-1 bg-white border rounded-lg mb-6">
+      {/* Christmas Tab Navigation */}
+      <div className="px-4 mb-4 relative z-10">
+        <div className="tab-christmas">
           {(["chains", "my-gifts", "profile"] as TabType[]).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2 text-sm rounded-md ${
-                activeTab === tab
-                  ? "bg-primary text-white"
-                  : "text-muted-foreground"
+              onClick={() => {
+                sounds.playClick();
+                setActiveTab(tab);
+              }}
+              className={`tab-christmas-item flex-1 justify-center ${
+                activeTab === tab ? "active" : ""
               }`}
             >
-              {tab === "chains"
-                ? "🔗 Chains"
-                : tab === "my-gifts"
-                ? "🎁 Gifts"
-                : "👤 Profile"}
+              {tab === "chains" && <span>🎄</span>}
+              {tab === "my-gifts" && <span>🎁</span>}
+              {tab === "profile" && <span>👤</span>}
+              <span className="hidden sm:inline">
+                {tab === "chains"
+                  ? "Chains"
+                  : tab === "my-gifts"
+                  ? "Gifts"
+                  : "Profile"}
+              </span>
             </button>
           ))}
         </div>
+      </div>
 
+      {/* Main Content */}
+      <div className="px-4 relative z-10">
         {activeTab === "chains" && (
           <div className="space-y-4">
             <div className="flex justify-between items-center">
-              <h2 className="font-semibold">Available Chains</h2>
-              <Button onClick={() => setShowCreateModal(true)}>+ Create</Button>
+              <h2 className="text-2xl font-bold text-gray-800">
+                Available Chains
+              </h2>
+              <button
+                onClick={() => {
+                  sounds.playClick();
+                  setShowCreateModal(true);
+                }}
+                className="btn-gift-box relative px-6 py-3 rounded-xl shadow-lg hover:scale-105 transition-transform"
+              >
+                <span className="relative z-10 flex items-center gap-2 text-white font-bold">
+                  🎁 Create
+                </span>
+              </button>
             </div>
             {isLoading ? (
-              <p className="text-center text-muted-foreground py-8">
-                Loading chains...
-              </p>
+              <div className="text-center py-12">
+                <div className="text-5xl animate-spin mb-4">🎄</div>
+                <p className="text-gray-600">Loading chains...</p>
+              </div>
             ) : chains.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">
+              <div className="text-center py-12 bg-white/80 backdrop-blur rounded-2xl">
+                <div className="text-6xl mb-4">🎄</div>
+                <p className="text-gray-600 mb-4 text-lg">
                   No chains available yet
                 </p>
-                <Button onClick={() => setShowCreateModal(true)}>
-                  Create the first chain!
-                </Button>
+                <button
+                  onClick={() => {
+                    sounds.playClick();
+                    setShowCreateModal(true);
+                  }}
+                  className="btn-christmas px-8 py-3"
+                >
+                  🎅 Create the first chain!
+                </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {joinError && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                  <div className="bg-red-100 border-2 border-red-300 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                    <span>❌</span>
                     {joinError}
                   </div>
                 )}
-                {chains.map((chain) => (
-                  <ChainCard
-                    key={chain.id}
-                    chain={chain}
-                    onJoin={handleJoin}
-                    isLoading={isLoading}
-                  />
-                ))}
+                <div className="grid gap-4">
+                  {chains.map((chain) => (
+                    <ChainCard
+                      key={chain.id}
+                      chain={chain}
+                      onJoin={handleJoin}
+                      isLoading={isLoading}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -341,69 +404,70 @@ export default function SecretSantaChain() {
             {/* My Chain Participations */}
             {myParticipations.length > 0 && (
               <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-muted-foreground">
-                  My Chains
+                <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                  <span>🎄</span> My Chains
                 </h3>
                 {myParticipations.map((participation) => (
-                  <div
-                    key={participation.id}
-                    className="bg-white border rounded-xl p-4"
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-semibold">
-                        {participation.chain.name}
-                      </h4>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          participation.chain.status === "active"
-                            ? "bg-green-100 text-green-800"
-                            : participation.chain.status === "open"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {participation.chain.status}
-                      </span>
-                    </div>
-
-                    {participation.assigned_recipient_fid ? (
-                      <div className="mt-3">
-                        <p className="text-sm text-muted-foreground mb-2">
-                          🎯 Your recipient:{" "}
-                          <span className="font-medium text-foreground">
-                            @
-                            {participation.assigned_recipient?.username ||
-                              `FID ${participation.assigned_recipient_fid}`}
-                          </span>
-                        </p>
-                        {participation.has_sent_gift ? (
-                          <div className="flex items-center gap-2 text-green-600 text-sm">
-                            <span>✓</span>
-                            <span>Gift sent!</span>
-                          </div>
-                        ) : (
-                          <Button
-                            onClick={() => {
-                              setSendGiftModal({
-                                giftId: participation.id,
-                                chainId: participation.chain_id,
-                                recipientFid:
-                                  participation.assigned_recipient_fid!,
-                                recipientUsername:
-                                  participation.assigned_recipient?.username,
-                              });
-                            }}
-                            className="w-full mt-2"
-                          >
-                            🎁 Send Gift
-                          </Button>
-                        )}
+                  <div key={participation.id} className="candy-cane-border">
+                    <div className="candy-cane-border-inner p-4 bg-gradient-to-b from-green-50 to-white">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-bold text-gray-800">
+                          {participation.chain.name}
+                        </h4>
+                        <span
+                          className={`badge-open ${
+                            participation.chain.status === "active"
+                              ? "badge-active"
+                              : ""
+                          }`}
+                        >
+                          {participation.chain.status}
+                        </span>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        ⏳ Waiting for matching to complete...
-                      </p>
-                    )}
+
+                      {participation.assigned_recipient_fid ? (
+                        <div className="mt-3">
+                          <p className="text-sm text-gray-600 mb-2">
+                            🎯 Your recipient:{" "}
+                            <span className="font-bold text-gray-800">
+                              @
+                              {participation.assigned_recipient?.username ||
+                                `FID ${participation.assigned_recipient_fid}`}
+                            </span>
+                          </p>
+                          {participation.has_sent_gift ? (
+                            <div className="flex items-center gap-2 text-green-600 text-sm bg-green-100 rounded-full px-4 py-2">
+                              <span>✓</span>
+                              <span className="font-semibold">
+                                Gift sent! 🎁
+                              </span>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                sounds.playClick();
+                                setSendGiftModal({
+                                  giftId: participation.id,
+                                  chainId: participation.chain_id,
+                                  recipientFid:
+                                    participation.assigned_recipient_fid!,
+                                  recipientUsername:
+                                    participation.assigned_recipient?.username,
+                                });
+                              }}
+                              className="w-full btn-christmas py-3 pulse-glow"
+                            >
+                              🎁 Send Gift
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500 mt-2 flex items-center gap-2">
+                          <span className="animate-spin">⏳</span>
+                          Waiting for matching to complete...
+                        </p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -412,8 +476,8 @@ export default function SecretSantaChain() {
             {/* Received Gifts */}
             {myGifts.length > 0 && (
               <div className="space-y-3">
-                <h3 className="font-semibold text-sm text-muted-foreground">
-                  Gifts
+                <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                  <span>🎁</span> Gifts
                 </h3>
                 {myGifts.map((gift) => (
                   <GiftCard
@@ -430,10 +494,12 @@ export default function SecretSantaChain() {
 
             {/* Empty State */}
             {myParticipations.length === 0 && myGifts.length === 0 && (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">📭</div>
-                <p className="text-muted-foreground mb-2">No gifts yet</p>
-                <p className="text-sm text-muted-foreground">
+              <div className="text-center py-12 bg-white/80 backdrop-blur rounded-2xl">
+                <div className="text-6xl mb-4">📭🎄</div>
+                <p className="text-gray-700 mb-2 text-lg font-medium">
+                  No gifts yet
+                </p>
+                <p className="text-sm text-gray-500">
                   Join a chain to start giving and receiving gifts!
                 </p>
               </div>
@@ -442,26 +508,33 @@ export default function SecretSantaChain() {
         )}
 
         {activeTab === "profile" && (
-          <div className="bg-white border rounded-xl p-6 text-center">
-            {user?.pfpUrl && (
-              <img
-                src={user.pfpUrl}
-                alt=""
-                className="h-16 w-16 rounded-full mx-auto mb-4"
-              />
-            )}
-            <h2 className="font-bold text-lg">@{user?.username}</h2>
-            <p className="text-sm text-muted-foreground mb-4">
-              FID: {user?.fid}
-            </p>
-            <p className="text-sm">
-              Quality Score:{" "}
-              <span className="font-semibold text-green-600">
-                {user?.neynarScore?.toFixed(2)}
-              </span>
-            </p>
-            <div className="mt-6">
-              <AuthButton />
+          <div className="candy-cane-border">
+            <div className="candy-cane-border-inner p-6 text-center bg-gradient-to-b from-red-50 to-white">
+              <div className="relative inline-block mb-4">
+                {user?.pfpUrl && (
+                  <img
+                    src={user.pfpUrl}
+                    alt=""
+                    className="h-20 w-20 rounded-full border-4 border-red-500 shadow-lg"
+                  />
+                )}
+                <div className="absolute -bottom-2 -right-2 text-3xl">🎅</div>
+              </div>
+              <h2 className="font-bold text-xl text-gray-800">
+                @{user?.username}
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">FID: {user?.fid}</p>
+              <div className="bg-green-100 rounded-xl p-3 mb-4">
+                <p className="text-sm text-gray-600">
+                  Quality Score:{" "}
+                  <span className="font-bold text-green-600 text-lg">
+                    {user?.neynarScore?.toFixed(2)} ⭐
+                  </span>
+                </p>
+              </div>
+              <div className="mt-4">
+                <AuthButton />
+              </div>
             </div>
           </div>
         )}

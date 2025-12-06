@@ -42,7 +42,7 @@ export async function GET() {
       tags: ["santa", "secretsanta", "xmas", "christmas", "holidays"],
     },
     baseBuilder: {
-      allowedAddresses: ["0x8342A48694A74044116F330db5050a267b28dD85"],
+      allowedAddresses: ["0xF928350196dFb7e9D7e0391180B7fbe25c7cdC98"],
     },
   };
 

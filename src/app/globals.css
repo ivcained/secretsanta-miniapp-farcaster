@@ -1,75 +1,63 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Mountains+of+Christmas:wght@400;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Base Docs inspired color palette */
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #e8f4fc;
+  --foreground: #1a2e1a;
   --card: #ffffff;
-  --card-foreground: #0f172a;
+  --card-foreground: #1a2e1a;
   --popover: #ffffff;
-  --popover-foreground: #0f172a;
-  --primary: #0052ff;
+  --popover-foreground: #1a2e1a;
+  --primary: #c41e3a;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f8fafc;
-  --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --secondary: #165b33;
+  --secondary-foreground: #ffffff;
+  --muted: #f0f7f0;
+  --muted-foreground: #4a5d4a;
+  --accent: #bb2528;
+  --accent-foreground: #ffffff;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0052ff;
-  --radius: 0.5rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Keep white background even in dark mode */
-    --background: #ffffff;
-    --foreground: #0f172a;
-    --card: #ffffff;
-    --card-foreground: #0f172a;
-    --popover: #ffffff;
-    --popover-foreground: #0f172a;
-    --primary: #0052ff;
-    --primary-foreground: #ffffff;
-    --secondary: #f1f5f9;
-    --secondary-foreground: #0f172a;
-    --muted: #f8fafc;
-    --muted-foreground: #64748b;
-    --accent: #f1f5f9;
-    --accent-foreground: #0f172a;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --border: #e2e8f0;
-    --input: #e2e8f0;
-    --ring: #0052ff;
-  }
+  --border: #c8d8c8;
+  --input: #e2e8e2;
+  --ring: #c41e3a;
+  --radius: 0.75rem;
+  --christmas-red: #c41e3a;
+  --christmas-red-dark: #8b0000;
+  --christmas-green: #165b33;
+  --christmas-green-light: #2d8b57;
+  --christmas-gold: #ffd700;
+  --christmas-gold-dark: #daa520;
+  --candy-cane-red: #e4002b;
+  --candy-cane-white: #ffffff;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-feature-settings: 'rlig' 1, 'calt' 1;
+  background: linear-gradient(180deg, #c9e4f3 0%, #e8f4fc 50%, #d4e8f5 100%);
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.font-christmas {
+  font-family: "Mountains of Christmas", cursive;
 }
 
 * {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 *::-webkit-scrollbar {
   display: none;
 }
 
-/* Smooth scrolling for horizontal navigation */
 .overflow-x-auto {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
@@ -77,6 +65,202 @@ body {
 
 @layer base {
   :root {
-    --radius: 0.5rem;
+    --radius: 0.75rem;
   }
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) translateX(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(20px);
+    opacity: 0.3;
+  }
+}
+
+@keyframes snowfall-slow {
+  0% {
+    transform: translateY(-10vh) translateX(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(110vh) translateX(-15px) rotate(360deg);
+    opacity: 0.3;
+  }
+}
+
+.snowflake {
+  position: fixed;
+  top: -10px;
+  color: white;
+  font-size: 1rem;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+  animation: snowfall linear infinite;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.8;
+}
+
+.snowflake:nth-child(odd) {
+  animation-name: snowfall-slow;
+}
+
+.candy-cane-border {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--candy-cane-red),
+    var(--candy-cane-red) 10px,
+    var(--candy-cane-white) 10px,
+    var(--candy-cane-white) 20px
+  );
+  padding: 4px;
+  border-radius: 16px;
+}
+
+.candy-cane-border-inner {
+  background: white;
+  border-radius: 12px;
+}
+
+.btn-christmas {
+  background: linear-gradient(180deg, #c41e3a 0%, #8b0000 100%);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 12px 24px;
+  font-weight: 600;
+  box-shadow: 0 4px 6px rgba(139, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-christmas:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(139, 0, 0, 0.4);
+}
+
+.btn-christmas:active {
+  transform: translateY(0);
+}
+
+.btn-christmas-green {
+  background: linear-gradient(180deg, #2d8b57 0%, #165b33 100%);
+  box-shadow: 0 4px 6px rgba(22, 91, 51, 0.3);
+}
+
+.badge-open {
+  background: linear-gradient(180deg, #4ade80 0%, #22c55e 100%);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.badge-active {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+  color: #1a2e1a;
+}
+
+.tab-christmas {
+  background: linear-gradient(180deg, #165b33 0%, #0d3d22 100%);
+  border-radius: 30px;
+  padding: 6px;
+  display: flex;
+  gap: 4px;
+  box-shadow: 0 4px 8px rgba(13, 61, 34, 0.3);
+}
+
+.tab-christmas-item {
+  padding: 10px 16px;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tab-christmas-item:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-christmas-item.active {
+  background: linear-gradient(180deg, #c41e3a 0%, #8b0000 100%);
+  color: white;
+  box-shadow: 0 2px 4px rgba(139, 0, 0, 0.3);
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(196, 30, 58, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(196, 30, 58, 0.8);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes jingle {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+.jingle {
+  animation: jingle 0.5s ease-in-out;
+}
+
+.btn-gift-box {
+  position: relative;
+  background: linear-gradient(180deg, #c41e3a 0%, #8b0000 100%);
+  border-radius: 12px;
+  padding: 16px 24px;
+  color: white;
+  font-weight: 700;
+  overflow: visible;
+}
+
+.ornament {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ornament-red {
+  background: radial-gradient(circle at 30% 30%, #ff6b6b, #c41e3a);
+}
+
+.ornament-green {
+  background: radial-gradient(circle at 30% 30%, #4ade80, #165b33);
+}
+
+.card-festive {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.card-festive-blue {
+  background: linear-gradient(180deg, #e3f2fd 0%, #bbdefb 100%);
+}
+
+.card-festive-green {
+  background: linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 100%);
 }
