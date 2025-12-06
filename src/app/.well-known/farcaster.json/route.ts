@@ -40,6 +40,7 @@ export async function GET() {
       canonicalDomain: "https://secretsanta.quest",
       noindex: false,
       tags: ["santa", "secretsanta", "xmas", "christmas", "holidays"],
+      primaryCategory: "entertainment",
     },
     baseBuilder: {
       allowedAddresses: ["0xF928350196dFb7e9D7e0391180B7fbe25c7cdC98"],
