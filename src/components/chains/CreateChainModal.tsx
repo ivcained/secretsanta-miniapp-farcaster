@@ -32,13 +32,14 @@ export function CreateChainModal({
     name: "",
     description: "",
     theme: "General",
-    min_participants: 3,
-    max_participants: 20,
-    budget_min: 10,
-    budget_max: 50,
-    join_deadline: formatDateForInput(joinDeadline),
-    gift_deadline: formatDateForInput(giftDeadline),
-    reveal_date: formatDateForInput(revealDate),
+    minParticipants: 3,
+    maxParticipants: 20,
+    minAmount: 10,
+    maxAmount: 50,
+    currency: "USDC" as "ETH" | "USDC",
+    joinDeadline: formatDateForInput(joinDeadline),
+    giftDeadline: formatDateForInput(giftDeadline),
+    revealDate: formatDateForInput(revealDate),
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -49,22 +50,54 @@ export function CreateChainModal({
     setError(null);
 
     try {
+      // Convert date strings to ISO datetime format
+      const joinDeadlineISO = new Date(
+        formData.joinDeadline + "T23:59:59Z"
+      ).toISOString();
+      const revealDateISO = new Date(
+        formData.revealDate + "T00:00:00Z"
+      ).toISOString();
+
+      const requestBody = {
+        name: formData.name,
+        description: formData.description || undefined,
+        creatorFid: user.fid,
+        minAmount: formData.minAmount,
+        maxAmount: formData.maxAmount,
+        currency: formData.currency,
+        minParticipants: formData.minParticipants,
+        maxParticipants: formData.maxParticipants,
+        joinDeadline: joinDeadlineISO,
+        revealDate: revealDateISO,
+      };
+
+      console.log("[CreateChain] Sending request:", requestBody);
+
       const response = await fetch("/api/chains", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          created_by_fid: user.fid,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
+      console.log("[CreateChain] Response:", data);
 
       if (data.success) {
         onCreated();
         onClose();
       } else {
-        setError(data.error || "Failed to create chain");
+        // Show detailed error if available
+        if (data.details) {
+          const errorMessages = data.details
+            .map(
+              (d: { path: string[]; message: string }) =>
+                `${d.path.join(".")}: ${d.message}`
+            )
+            .join(", ");
+          setError(`${data.error}: ${errorMessages}`);
+        } else {
+          setError(data.error || "Failed to create chain");
+        }
       }
     } catch (err) {
       setError("Failed to create chain");
@@ -121,6 +154,7 @@ export function CreateChainModal({
               placeholder="e.g., Farcaster Devs Secret Santa"
               className="w-full px-3 py-2 border border-border rounded-lg"
               required
+              minLength={3}
               maxLength={100}
             />
           </div>
@@ -168,15 +202,15 @@ export function CreateChainModal({
               </label>
               <input
                 type="number"
-                value={formData.min_participants}
+                value={formData.minParticipants}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    min_participants: Number(e.target.value),
+                    minParticipants: Number(e.target.value),
                   })
                 }
                 className="w-full px-3 py-2 border border-border rounded-lg"
-                min={3}
+                min={2}
                 max={100}
               />
             </div>
@@ -186,53 +220,78 @@ export function CreateChainModal({
               </label>
               <input
                 type="number"
-                value={formData.max_participants}
+                value={formData.maxParticipants}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    max_participants: Number(e.target.value),
+                    maxParticipants: Number(e.target.value),
                   })
                 }
                 className="w-full px-3 py-2 border border-border rounded-lg"
-                min={3}
-                max={1000}
+                min={2}
+                max={100}
               />
             </div>
+          </div>
+
+          <div>
+            <label
+              className="block text-sm font-medium mb-1"
+              id="currency-label"
+            >
+              Currency
+            </label>
+            <select
+              value={formData.currency}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  currency: e.target.value as "ETH" | "USDC",
+                })
+              }
+              className="w-full px-3 py-2 border border-border rounded-lg"
+              aria-labelledby="currency-label"
+            >
+              <option value="USDC">USDC</option>
+              <option value="ETH">ETH</option>
+            </select>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">
-                Min Budget ($)
+                Min Budget ({formData.currency})
               </label>
               <input
                 type="number"
-                value={formData.budget_min}
+                value={formData.minAmount}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    budget_min: Number(e.target.value),
+                    minAmount: Number(e.target.value),
                   })
                 }
                 className="w-full px-3 py-2 border border-border rounded-lg"
-                min={0}
+                min={1}
+                step={formData.currency === "ETH" ? "0.001" : "1"}
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">
-                Max Budget ($)
+                Max Budget ({formData.currency})
               </label>
               <input
                 type="number"
-                value={formData.budget_max}
+                value={formData.maxAmount}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
-                    budget_max: Number(e.target.value),
+                    maxAmount: Number(e.target.value),
                   })
                 }
                 className="w-full px-3 py-2 border border-border rounded-lg"
-                min={0}
+                min={1}
+                step={formData.currency === "ETH" ? "0.001" : "1"}
               />
             </div>
           </div>
@@ -243,9 +302,9 @@ export function CreateChainModal({
             </label>
             <input
               type="date"
-              value={formData.join_deadline}
+              value={formData.joinDeadline}
               onChange={(e) =>
-                setFormData({ ...formData, join_deadline: e.target.value })
+                setFormData({ ...formData, joinDeadline: e.target.value })
               }
               className="w-full px-3 py-2 border border-border rounded-lg"
               required
@@ -262,13 +321,13 @@ export function CreateChainModal({
             </label>
             <input
               type="date"
-              value={formData.gift_deadline}
+              value={formData.giftDeadline}
               onChange={(e) =>
-                setFormData({ ...formData, gift_deadline: e.target.value })
+                setFormData({ ...formData, giftDeadline: e.target.value })
               }
               className="w-full px-3 py-2 border border-border rounded-lg"
               required
-              min={formData.join_deadline}
+              min={formData.joinDeadline}
             />
             <p className="text-xs text-muted-foreground mt-1">
               Last day to send gifts
@@ -281,13 +340,13 @@ export function CreateChainModal({
             </label>
             <input
               type="date"
-              value={formData.reveal_date}
+              value={formData.revealDate}
               onChange={(e) =>
-                setFormData({ ...formData, reveal_date: e.target.value })
+                setFormData({ ...formData, revealDate: e.target.value })
               }
               className="w-full px-3 py-2 border border-border rounded-lg"
               required
-              min={formData.gift_deadline}
+              min={formData.giftDeadline}
             />
             <p className="text-xs text-muted-foreground mt-1">
               When Secret Santas are revealed
@@ -304,7 +363,9 @@ export function CreateChainModal({
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || !formData.name}
+              disabled={
+                isSubmitting || !formData.name || formData.name.length < 3
+              }
               className="flex-1"
             >
               {isSubmitting ? "Creating..." : "Create Chain 🎄"}
