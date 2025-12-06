@@ -3,11 +3,16 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useFrameContext } from "~/components/providers/FrameProvider";
 import { sdk } from "@farcaster/miniapp-sdk";
+import { useComposeCast } from "@coinbase/onchainkit/minikit";
 import { useAuth } from "~/components/auth";
 import { AuthButton } from "~/components/auth/AuthButton";
 import { Button } from "~/components/ui/Button";
 import { ChainCard, CreateChainModal } from "~/components/chains";
 import { GiftCard, SendGiftModal, ThankYouModal } from "~/components/gifts";
+import {
+  getJoinChainShareParams,
+  getCreateChainShareParams,
+} from "~/lib/share";
 
 type TabType = "chains" | "my-gifts" | "profile";
 
@@ -85,6 +90,7 @@ interface ChainParticipation {
 export default function SecretSantaChain() {
   const frameContext = useFrameContext();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { composeCast } = useComposeCast();
   const isValidScore = user?.isValidScore ?? false;
   const [activeTab, setActiveTab] = useState<TabType>("chains");
   const [chains, setChains] = useState<GiftChain[]>([]);
@@ -174,6 +180,13 @@ export default function SecretSantaChain() {
       });
       const data = await res.json();
       if (data.success) {
+        // Find the chain name for the share message
+        const joinedChain = chains.find((c) => c.id === id);
+        if (joinedChain) {
+          // Trigger compose cast for sharing
+          const shareParams = getJoinChainShareParams(joinedChain.name, id);
+          composeCast(shareParams);
+        }
         fetchChains();
       } else {
         setJoinError(data.error || "Failed to join chain");
@@ -185,6 +198,16 @@ export default function SecretSantaChain() {
       setIsLoading(false);
     }
   };
+
+  const handleChainCreated = useCallback(
+    (chainId: string, chainName: string) => {
+      // Trigger compose cast for sharing the created chain
+      const shareParams = getCreateChainShareParams(chainName, chainId);
+      composeCast(shareParams);
+      fetchChains();
+    },
+    [composeCast, fetchChains]
+  );
 
   if (authLoading) {
     return (
@@ -447,7 +470,7 @@ export default function SecretSantaChain() {
         {showCreateModal && (
           <CreateChainModal
             onClose={() => setShowCreateModal(false)}
-            onCreated={fetchChains}
+            onCreated={handleChainCreated}
           />
         )}
 

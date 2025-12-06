@@ -1,118 +1,184 @@
-import { sdk } from "@farcaster/miniapp-sdk";
-
 /**
  * Share utilities for Secret Santa Chain
+ * Uses MiniKit's useComposeCast hook for better integration
  */
 
 export interface ShareOptions {
   text: string;
   url?: string;
-  embeds?: string[];
+  embeds?: [] | [string] | [string, string];
+}
+
+// App URL for embeds
+const APP_URL =
+  process.env.NEXT_PUBLIC_URL || "https://secret-santa-chain.vercel.app";
+
+/**
+ * Get share parameters for joining a chain
+ */
+export function getJoinChainShareParams(
+  chainName: string,
+  chainId: string
+): ShareOptions {
+  const shareUrl = `${APP_URL}?chain=${chainId}`;
+
+  return {
+    text: `🎄✨ I just joined the "${chainName}" Secret Santa chain!\n\nSpread some holiday magic with anonymous gifting on Farcaster. Who's in? 🎁\n\n👇 Join now:`,
+    embeds: [shareUrl],
+  };
 }
 
 /**
- * Share a cast about joining a chain
+ * Get share parameters for creating a chain
+ */
+export function getCreateChainShareParams(
+  chainName: string,
+  chainId: string
+): ShareOptions {
+  const shareUrl = `${APP_URL}?chain=${chainId}`;
+
+  return {
+    text: `🎅🎄 I just created a Secret Santa chain: "${chainName}"!\n\nJoin me for some anonymous gift-giving fun this holiday season. Let's spread the joy! 🎁✨\n\n👇 Be my Secret Santa:`,
+    embeds: [shareUrl],
+  };
+}
+
+/**
+ * Legacy function - Share a cast about joining a chain
+ * @deprecated Use getJoinChainShareParams with useComposeCast hook instead
  */
 export async function shareJoinedChain(
   chainName: string,
-  chainId: string
+  chainId: string,
+  composeCast?: (params: ShareOptions) => void
 ): Promise<void> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_URL || "https://secret-santa-chain.vercel.app";
-  const shareUrl = `${baseUrl}?chain=${chainId}`;
+  const params = getJoinChainShareParams(chainName, chainId);
 
-  try {
-    await sdk.actions.composeCast({
-      text: `🎄 I just joined "${chainName}" on Secret Santa Chain! Join me in spreading holiday cheer through anonymous gifting. 🎁\n\n${shareUrl}`,
-      embeds: [shareUrl],
-    });
-  } catch (error) {
-    console.error("Failed to share:", error);
+  if (composeCast) {
+    composeCast(params);
+  } else {
     // Fallback to clipboard
-    await copyToClipboard(
-      `I just joined "${chainName}" on Secret Santa Chain! ${shareUrl}`
-    );
+    await copyToClipboard(`${params.text}\n${params.embeds?.[0] || ""}`);
   }
 }
 
 /**
- * Share a cast about creating a chain
+ * Legacy function - Share a cast about creating a chain
+ * @deprecated Use getCreateChainShareParams with useComposeCast hook instead
  */
 export async function shareCreatedChain(
   chainName: string,
-  chainId: string
+  chainId: string,
+  composeCast?: (params: ShareOptions) => void
 ): Promise<void> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_URL || "https://secret-santa-chain.vercel.app";
-  const shareUrl = `${baseUrl}?chain=${chainId}`;
+  const params = getCreateChainShareParams(chainName, chainId);
 
-  try {
-    await sdk.actions.composeCast({
-      text: `🎅 I created a new Secret Santa Chain: "${chainName}"! Join us for anonymous gift giving this holiday season. 🎁✨\n\n${shareUrl}`,
-      embeds: [shareUrl],
-    });
-  } catch (error) {
-    console.error("Failed to share:", error);
-    await copyToClipboard(
-      `Join my Secret Santa Chain: "${chainName}"! ${shareUrl}`
-    );
+  if (composeCast) {
+    composeCast(params);
+  } else {
+    // Fallback to clipboard
+    await copyToClipboard(`${params.text}\n${params.embeds?.[0] || ""}`);
   }
 }
 
 /**
- * Share a cast about receiving a gift
+ * Get share parameters for receiving a gift
  */
-export async function shareReceivedGift(chainName: string): Promise<void> {
-  try {
-    await sdk.actions.composeCast({
-      text: `🎁 I just received an anonymous gift from my Secret Santa in "${chainName}"! The mystery continues... 🎄✨\n\nJoin Secret Santa Chain to spread holiday joy!`,
-    });
-  } catch (error) {
-    console.error("Failed to share:", error);
+export function getReceivedGiftShareParams(chainName: string): ShareOptions {
+  return {
+    text: `🎁✨ Just received an anonymous gift from my Secret Santa in "${chainName}"!\n\nThe mystery continues... Who could it be? 🤔🎄\n\nJoin Secret Santa Chain and spread some holiday magic!`,
+    embeds: [APP_URL],
+  };
+}
+
+/**
+ * Get share parameters for the reveal
+ */
+export function getRevealShareParams(
+  chainName: string,
+  secretSantaUsername?: string,
+  gifteeUsername?: string
+): ShareOptions {
+  let text = `🎉🎄 The big reveal is here!\n\n`;
+
+  if (secretSantaUsername) {
+    text += `My Secret Santa was @${secretSantaUsername}! Thank you for the amazing gift! 🙏\n`;
+  }
+  if (gifteeUsername) {
+    text += `I was the Secret Santa for @${gifteeUsername}! Hope you loved it! 🎁\n`;
+  }
+
+  text += `\nSecret Santa Chain made this holiday season extra special! ✨`;
+
+  return {
+    text,
+    embeds: [APP_URL],
+  };
+}
+
+/**
+ * Get share parameters for inviting others
+ */
+export function getInviteShareParams(): ShareOptions {
+  return {
+    text: `🎅✨ Discover Secret Santa Chain - the anonymous gifting network for Farcaster!\n\nCreate or join gift chains, send anonymous gifts, and spread holiday cheer with your frens. 🎁🎄\n\n👇 Join the fun:`,
+    embeds: [APP_URL],
+  };
+}
+
+/**
+ * Legacy function - Share a cast about receiving a gift
+ * @deprecated Use getReceivedGiftShareParams with useComposeCast hook instead
+ */
+export async function shareReceivedGift(
+  chainName: string,
+  composeCast?: (params: ShareOptions) => void
+): Promise<void> {
+  const params = getReceivedGiftShareParams(chainName);
+
+  if (composeCast) {
+    composeCast(params);
+  } else {
+    await copyToClipboard(params.text);
   }
 }
 
 /**
- * Share a cast about the reveal
+ * Legacy function - Share a cast about the reveal
+ * @deprecated Use getRevealShareParams with useComposeCast hook instead
  */
 export async function shareReveal(
   chainName: string,
   secretSantaUsername?: string,
-  gifteeUsername?: string
+  gifteeUsername?: string,
+  composeCast?: (params: ShareOptions) => void
 ): Promise<void> {
-  let text = `🎉 The big reveal! `;
+  const params = getRevealShareParams(
+    chainName,
+    secretSantaUsername,
+    gifteeUsername
+  );
 
-  if (secretSantaUsername) {
-    text += `My Secret Santa was @${secretSantaUsername}! `;
-  }
-  if (gifteeUsername) {
-    text += `I was the Secret Santa for @${gifteeUsername}! `;
-  }
-
-  text += `\n\nThank you Secret Santa Chain for making this holiday season special! 🎄🎁`;
-
-  try {
-    await sdk.actions.composeCast({ text });
-  } catch (error) {
-    console.error("Failed to share:", error);
+  if (composeCast) {
+    composeCast(params);
+  } else {
+    await copyToClipboard(params.text);
   }
 }
 
 /**
- * Share an invite to the app
+ * Legacy function - Share an invite to the app
+ * @deprecated Use getInviteShareParams with useComposeCast hook instead
  */
-export async function shareInvite(): Promise<void> {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_URL || "https://secret-santa-chain.vercel.app";
+export async function shareInvite(
+  composeCast?: (params: ShareOptions) => void
+): Promise<void> {
+  const params = getInviteShareParams();
 
-  try {
-    await sdk.actions.composeCast({
-      text: `🎅 Join me on Secret Santa Chain - the anonymous gifting network for Farcaster! Create or join gift chains, send anonymous gifts, and spread holiday cheer. 🎁🎄\n\n${baseUrl}`,
-      embeds: [baseUrl],
-    });
-  } catch (error) {
-    console.error("Failed to share:", error);
-    await copyToClipboard(`Join Secret Santa Chain! ${baseUrl}`);
+  if (composeCast) {
+    composeCast(params);
+  } else {
+    await copyToClipboard(`${params.text}\n${APP_URL}`);
   }
 }
 

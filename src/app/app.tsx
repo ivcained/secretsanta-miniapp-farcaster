@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMiniKit } from "@coinbase/onchainkit/minikit";
-import { useEffect } from "react";
+import { useMiniKit, useIsInMiniApp } from "@coinbase/onchainkit/minikit";
+import { useEffect, useState } from "react";
+import { AddFramePrompt } from "~/components/AddFramePrompt";
 
 const SecretSantaChain = dynamic(
   () => import("~/components/SecretSantaChain"),
@@ -13,6 +14,8 @@ const SecretSantaChain = dynamic(
 
 export default function App() {
   const { isFrameReady, setFrameReady } = useMiniKit();
+  const { isInMiniApp } = useIsInMiniApp();
+  const [showAddPrompt, setShowAddPrompt] = useState(false);
 
   // Initialize the miniapp
   useEffect(() => {
@@ -21,5 +24,19 @@ export default function App() {
     }
   }, [setFrameReady, isFrameReady]);
 
-  return <SecretSantaChain />;
+  // Show add frame prompt when in miniapp
+  useEffect(() => {
+    if (isFrameReady && isInMiniApp) {
+      setShowAddPrompt(true);
+    }
+  }, [isFrameReady, isInMiniApp]);
+
+  return (
+    <>
+      <SecretSantaChain />
+      {showAddPrompt && (
+        <AddFramePrompt onClose={() => setShowAddPrompt(false)} />
+      )}
+    </>
+  );
 }

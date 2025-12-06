@@ -6,7 +6,7 @@ import { useAuth } from "~/components/auth";
 
 interface CreateChainModalProps {
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (chainId: string, chainName: string) => void;
 }
 
 export function CreateChainModal({
@@ -82,8 +82,8 @@ export function CreateChainModal({
       const data = await response.json();
       console.log("[CreateChain] Response:", data);
 
-      if (data.success) {
-        onCreated();
+      if (data.success && data.chain) {
+        onCreated(data.chain.id, formData.name);
         onClose();
       } else {
         // Show detailed error if available
