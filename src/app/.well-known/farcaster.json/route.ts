@@ -43,7 +43,7 @@ export async function GET() {
       primaryCategory: "entertainment",
       webhookUrl:
         "https://api.neynar.com/f/app/239d30cd-d7eb-48f5-982c-370a27c4e6ac/event",
-      subtitle: "The art of Gifting Tis Season of Joy.",
+      subtitle: "The art of Gifting.",
       screenshotUrls: [
         "https://secretsanta.quest/screen1.png",
         "https://secretsanta.quest/screen2.png",
