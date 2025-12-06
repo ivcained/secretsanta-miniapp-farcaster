@@ -61,11 +61,25 @@ interface Gift {
   };
 }
 
-interface MyParticipation {
-  chainId: string;
-  assignedRecipientFid?: number;
-  assignedRecipientUsername?: string;
-  hasSentGift: boolean;
+interface ChainParticipation {
+  id: string;
+  chain_id: string;
+  user_fid: number;
+  assigned_recipient_fid: number | null;
+  has_sent_gift: boolean;
+  chain: {
+    id: string;
+    name: string;
+    status: string;
+    gift_deadline: string;
+    reveal_date: string;
+  };
+  assigned_recipient?: {
+    fid: number;
+    username: string;
+    display_name: string;
+    pfp_url: string;
+  };
 }
 
 export default function SecretSantaChain() {
@@ -75,9 +89,9 @@ export default function SecretSantaChain() {
   const [activeTab, setActiveTab] = useState<TabType>("chains");
   const [chains, setChains] = useState<GiftChain[]>([]);
   const [myGifts, setMyGifts] = useState<Gift[]>([]);
-  const [myParticipations, setMyParticipations] = useState<MyParticipation[]>(
-    []
-  );
+  const [myParticipations, setMyParticipations] = useState<
+    ChainParticipation[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [sendGiftModal, setSendGiftModal] = useState<{
@@ -116,16 +130,25 @@ export default function SecretSantaChain() {
     if (!user?.fid) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/gifts?userFid=${user.fid}`);
-      const data = await res.json();
-      if (data.gifts) {
-        // Transform gifts to include status
-        const transformedGifts = data.gifts.map((gift: Gift) => ({
+      // Fetch gifts
+      const giftsRes = await fetch(`/api/gifts?userFid=${user.fid}`);
+      const giftsData = await giftsRes.json();
+      if (giftsData.gifts) {
+        const transformedGifts = giftsData.gifts.map((gift: Gift) => ({
           ...gift,
           is_giver: gift.sender?.username === user.username,
           status: gift.is_revealed ? "revealed" : "sent",
         }));
         setMyGifts(transformedGifts);
+      }
+
+      // Fetch participations
+      const participationsRes = await fetch(
+        `/api/user/participations?fid=${user.fid}`
+      );
+      const participationsData = await participationsRes.json();
+      if (participationsData.success && participationsData.participations) {
+        setMyParticipations(participationsData.participations);
       }
     } catch (e) {
       console.error(e);
@@ -292,27 +315,104 @@ export default function SecretSantaChain() {
 
         {activeTab === "my-gifts" && (
           <div className="space-y-4">
-            {myGifts.length === 0 ? (
+            {/* My Chain Participations */}
+            {myParticipations.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground">
+                  My Chains
+                </h3>
+                {myParticipations.map((participation) => (
+                  <div
+                    key={participation.id}
+                    className="bg-white border rounded-xl p-4"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-semibold">
+                        {participation.chain.name}
+                      </h4>
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          participation.chain.status === "active"
+                            ? "bg-green-100 text-green-800"
+                            : participation.chain.status === "open"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {participation.chain.status}
+                      </span>
+                    </div>
+
+                    {participation.assigned_recipient_fid ? (
+                      <div className="mt-3">
+                        <p className="text-sm text-muted-foreground mb-2">
+                          🎯 Your recipient:{" "}
+                          <span className="font-medium text-foreground">
+                            @
+                            {participation.assigned_recipient?.username ||
+                              `FID ${participation.assigned_recipient_fid}`}
+                          </span>
+                        </p>
+                        {participation.has_sent_gift ? (
+                          <div className="flex items-center gap-2 text-green-600 text-sm">
+                            <span>✓</span>
+                            <span>Gift sent!</span>
+                          </div>
+                        ) : (
+                          <Button
+                            onClick={() => {
+                              setSendGiftModal({
+                                giftId: participation.id,
+                                chainId: participation.chain_id,
+                                recipientFid:
+                                  participation.assigned_recipient_fid!,
+                                recipientUsername:
+                                  participation.assigned_recipient?.username,
+                              });
+                            }}
+                            className="w-full mt-2"
+                          >
+                            🎁 Send Gift
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        ⏳ Waiting for matching to complete...
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Received Gifts */}
+            {myGifts.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm text-muted-foreground">
+                  Gifts
+                </h3>
+                {myGifts.map((gift) => (
+                  <GiftCard
+                    key={gift.id}
+                    gift={gift}
+                    onSendGift={(id) => {
+                      console.log("View gift:", id);
+                    }}
+                    onSendThankYou={(id) => setThankYouModal(id)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Empty State */}
+            {myParticipations.length === 0 && myGifts.length === 0 && (
               <div className="text-center py-8">
                 <div className="text-4xl mb-4">📭</div>
                 <p className="text-muted-foreground mb-2">No gifts yet</p>
                 <p className="text-sm text-muted-foreground">
                   Join a chain to start giving and receiving gifts!
                 </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {myGifts.map((gift) => (
-                  <GiftCard
-                    key={gift.id}
-                    gift={gift}
-                    onSendGift={(id) => {
-                      // For existing gifts, we don't need to send again
-                      console.log("View gift:", id);
-                    }}
-                    onSendThankYou={(id) => setThankYouModal(id)}
-                  />
-                ))}
               </div>
             )}
           </div>
