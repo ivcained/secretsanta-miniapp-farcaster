@@ -132,13 +132,42 @@ export default function SecretSantaChain() {
     try {
       const res = await fetch("/api/chains");
       const data = await res.json();
-      if (data.success) setChains(data.chains || []);
+      if (data.success) {
+        // Also fetch user's participations to mark joined chains
+        if (user?.fid) {
+          const participationsRes = await fetch(
+            `/api/user/participations?fid=${user.fid}`
+          );
+          const participationsData = await participationsRes.json();
+          if (participationsData.success && participationsData.participations) {
+            const joinedChainIds = new Set(
+              participationsData.participations.map(
+                (p: ChainParticipation) => p.chain_id
+              )
+            );
+            // Mark chains as joined
+            const chainsWithJoinStatus = (data.chains || []).map(
+              (chain: GiftChain) => ({
+                ...chain,
+                isJoined: joinedChainIds.has(chain.id),
+              })
+            );
+            setChains(chainsWithJoinStatus);
+            // Also update participations state
+            setMyParticipations(participationsData.participations);
+          } else {
+            setChains(data.chains || []);
+          }
+        } else {
+          setChains(data.chains || []);
+        }
+      }
     } catch (e) {
       console.error(e);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.fid]);
 
   const fetchMyGifts = useCallback(async () => {
     if (!user?.fid) return;
@@ -171,6 +200,13 @@ export default function SecretSantaChain() {
     }
   }, [user?.fid, user?.username]);
 
+  // Fetch participations when user is authenticated (for showing joined status on chains)
+  useEffect(() => {
+    if (isAuthenticated && user?.fid) {
+      fetchMyGifts();
+    }
+  }, [isAuthenticated, user?.fid, fetchMyGifts]);
+
   useEffect(() => {
     if (activeTab === "chains") fetchChains();
     if (activeTab === "my-gifts") fetchMyGifts();
@@ -195,7 +231,9 @@ export default function SecretSantaChain() {
           const shareParams = getJoinChainShareParams(joinedChain.name, id);
           composeCast(shareParams);
         }
+        // Refresh both chains and participations
         fetchChains();
+        fetchMyGifts();
       } else {
         setJoinError(data.error || "Failed to join chain");
       }
@@ -431,6 +469,7 @@ export default function SecretSantaChain() {
                       currentUserFid={user?.fid}
                       onJoin={handleJoin}
                       onStartMatching={handleStartMatching}
+                      isJoined={chain.isJoined}
                       isLoading={isLoading}
                     />
                   ))}
