@@ -32,45 +32,64 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    const { data: chains, error } = await supabaseAdmin
+    // First try to get chains with creator info
+    let chains;
+    let error;
+
+    const result = await supabaseAdmin
       .from("gift_chains")
-      .select(
-        `
-        *,
-        creator:users!gift_chains_creator_fid_fkey(fid, username, display_name, pfp_url)
-      `
-      )
+      .select("*")
       .eq("status", status)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
+    chains = result.data;
+    error = result.error;
+
     if (error) {
       console.error("Error fetching chains:", error);
       return NextResponse.json(
-        { error: "Failed to fetch chains" },
+        { success: false, error: "Failed to fetch chains" },
         { status: 500 }
       );
     }
 
     // Get participant counts for each chain
     const chainIds = chains?.map((c) => c.id) || [];
-    const { data: participantCounts } = await supabaseAdmin
-      .from("chain_participants")
-      .select("chain_id")
-      .in("chain_id", chainIds);
+    let countMap = new Map<string, number>();
 
-    const countMap = new Map<string, number>();
-    participantCounts?.forEach((p) => {
-      countMap.set(p.chain_id, (countMap.get(p.chain_id) || 0) + 1);
-    });
+    if (chainIds.length > 0) {
+      const { data: participantCounts } = await supabaseAdmin
+        .from("chain_participants")
+        .select("chain_id")
+        .in("chain_id", chainIds);
 
+      participantCounts?.forEach((p) => {
+        countMap.set(p.chain_id, (countMap.get(p.chain_id) || 0) + 1);
+      });
+    }
+
+    // Transform chains to match frontend expected format
     const chainsWithCounts = chains?.map((chain) => ({
-      ...chain,
-      participantCount: countMap.get(chain.id) || 0,
+      id: chain.id,
+      name: chain.name,
+      description: chain.description || "",
+      theme: "holiday", // Default theme
+      current_participants: countMap.get(chain.id) || 0,
+      max_participants: chain.max_participants,
+      budget_min: chain.min_amount,
+      budget_max: chain.max_amount,
+      status: chain.status,
+      join_deadline: chain.join_deadline,
+      gift_deadline: chain.join_deadline, // Use join_deadline as gift_deadline
+      reveal_date: chain.reveal_date,
+      currency: chain.currency,
+      creator_fid: chain.creator_fid,
     }));
 
     return NextResponse.json({
-      chains: chainsWithCounts,
+      success: true,
+      chains: chainsWithCounts || [],
       total: chains?.length || 0,
     });
   } catch (error) {
@@ -141,10 +160,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate creator's Neynar score
+    // Validate creator's Neynar score and get user data
     const validation = await validateUserScore(data.creatorFid);
     if (!validation.isValid) {
       return NextResponse.json({ error: validation.error }, { status: 403 });
+    }
+
+    // Ensure user exists in the database (upsert)
+    const neynarUser = validation.user;
+    const { error: userError } = await supabaseAdmin.from("users").upsert(
+      {
+        fid: data.creatorFid,
+        username: neynarUser?.username || null,
+        display_name: neynarUser?.display_name || null,
+        pfp_url: neynarUser?.pfp_url || null,
+        custody_address: neynarUser?.custody_address || null,
+        neynar_score: neynarUser?.experimental?.neynar_user_score || null,
+      },
+      {
+        onConflict: "fid",
+        ignoreDuplicates: false,
+      }
+    );
+
+    if (userError) {
+      console.error("Error upserting user:", userError);
+      return NextResponse.json(
+        { error: "Failed to create user record" },
+        { status: 500 }
+      );
     }
 
     // Create the chain
