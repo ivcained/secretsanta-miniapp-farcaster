@@ -79,7 +79,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { userFid } = body;
+    // Support both 'fid' and 'userFid' for backwards compatibility
+    const userFid = body.userFid || body.fid;
 
     if (!userFid || typeof userFid !== "number") {
       return NextResponse.json({ error: "Invalid user FID" }, { status: 400 });
@@ -146,6 +147,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Ensure user exists in the database (upsert)
+    const neynarUser = validation.user;
+    if (neynarUser) {
+      await supabaseAdmin.from("users").upsert(
+        {
+          fid: userFid,
+          username: neynarUser.username || null,
+          display_name: neynarUser.display_name || null,
+          pfp_url: neynarUser.pfp_url || null,
+          custody_address: neynarUser.custody_address || null,
+          neynar_score: neynarUser.experimental?.neynar_user_score || null,
+        },
+        { onConflict: "fid", ignoreDuplicates: false }
+      );
+    }
+
     // Join the chain
     const { error: joinError } = await supabaseAdmin
       .from("chain_participants")
@@ -160,6 +177,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { error: "Failed to join chain" },
         { status: 500 }
       );
+    }
+
+    // Update current_participants count
+    const { data: currentChain } = await supabaseAdmin
+      .from("gift_chains")
+      .select("current_participants")
+      .eq("id", id)
+      .single();
+
+    if (currentChain) {
+      await supabaseAdmin
+        .from("gift_chains")
+        .update({
+          current_participants: (currentChain.current_participants || 0) + 1,
+        })
+        .eq("id", id);
     }
 
     return NextResponse.json({

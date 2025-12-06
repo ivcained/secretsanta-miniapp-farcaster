@@ -24,6 +24,12 @@ interface GiftChain {
   join_deadline: string;
   gift_deadline: string;
   reveal_date: string;
+  isJoined?: boolean;
+  myAssignment?: {
+    recipientFid: number;
+    recipientUsername: string;
+    hasSentGift: boolean;
+  };
 }
 
 interface Gift {
@@ -35,6 +41,31 @@ interface Gift {
   is_giver: boolean;
   receiver_username?: string;
   giver_username?: string;
+  amount?: number;
+  currency?: string;
+  gift_type?: string;
+  is_revealed?: boolean;
+  chain?: {
+    name: string;
+    status: string;
+  };
+  recipient?: {
+    username: string;
+    display_name: string;
+    pfp_url: string;
+  };
+  sender?: {
+    username: string;
+    display_name: string;
+    pfp_url: string;
+  };
+}
+
+interface MyParticipation {
+  chainId: string;
+  assignedRecipientFid?: number;
+  assignedRecipientUsername?: string;
+  hasSentGift: boolean;
 }
 
 export default function SecretSantaChain() {
@@ -44,13 +75,19 @@ export default function SecretSantaChain() {
   const [activeTab, setActiveTab] = useState<TabType>("chains");
   const [chains, setChains] = useState<GiftChain[]>([]);
   const [myGifts, setMyGifts] = useState<Gift[]>([]);
+  const [myParticipations, setMyParticipations] = useState<MyParticipation[]>(
+    []
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [sendGiftModal, setSendGiftModal] = useState<{
     giftId: string;
+    chainId: string;
+    recipientFid: number;
     recipientUsername?: string;
   } | null>(null);
   const [thankYouModal, setThankYouModal] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   const ctx = frameContext?.context as Record<string, unknown> | undefined;
   const client = ctx?.client as Record<string, unknown> | undefined;
@@ -75,21 +112,54 @@ export default function SecretSantaChain() {
     }
   }, []);
 
+  const fetchMyGifts = useCallback(async () => {
+    if (!user?.fid) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/gifts?userFid=${user.fid}`);
+      const data = await res.json();
+      if (data.gifts) {
+        // Transform gifts to include status
+        const transformedGifts = data.gifts.map((gift: Gift) => ({
+          ...gift,
+          is_giver: gift.sender?.username === user.username,
+          status: gift.is_revealed ? "revealed" : "sent",
+        }));
+        setMyGifts(transformedGifts);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.fid, user?.username]);
+
   useEffect(() => {
     if (activeTab === "chains") fetchChains();
-  }, [activeTab, fetchChains]);
+    if (activeTab === "my-gifts") fetchMyGifts();
+  }, [activeTab, fetchChains, fetchMyGifts]);
 
   const handleJoin = async (id: string) => {
     if (!user?.fid) return;
+    setJoinError(null);
+    setIsLoading(true);
     try {
       const res = await fetch(`/api/chains/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "join", fid: user.fid }),
+        body: JSON.stringify({ fid: user.fid }),
       });
-      if ((await res.json()).success) fetchChains();
+      const data = await res.json();
+      if (data.success) {
+        fetchChains();
+      } else {
+        setJoinError(data.error || "Failed to join chain");
+      }
     } catch (e) {
       console.error(e);
+      setJoinError("Failed to join chain");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -202,6 +272,11 @@ export default function SecretSantaChain() {
               </div>
             ) : (
               <div className="space-y-3">
+                {joinError && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {joinError}
+                  </div>
+                )}
                 {chains.map((chain) => (
                   <ChainCard
                     key={chain.id}
@@ -231,12 +306,10 @@ export default function SecretSantaChain() {
                   <GiftCard
                     key={gift.id}
                     gift={gift}
-                    onSendGift={(id) =>
-                      setSendGiftModal({
-                        giftId: id,
-                        recipientUsername: gift.receiver_username,
-                      })
-                    }
+                    onSendGift={(id) => {
+                      // For existing gifts, we don't need to send again
+                      console.log("View gift:", id);
+                    }}
                     onSendThankYou={(id) => setThankYouModal(id)}
                   />
                 ))}
