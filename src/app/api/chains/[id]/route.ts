@@ -194,41 +194,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const newParticipantCount = participantCount || 1;
     console.log(`Chain ${id} now has ${newParticipantCount} participants`);
 
-    // Check if we should auto-trigger matching
-    // Auto-match when minimum participants is reached (default min is 2)
-    const minParticipants = chain.min_participants || 2;
-    console.log(
-      `Min participants required: ${minParticipants}, current: ${newParticipantCount}`
-    );
-
-    if (newParticipantCount >= minParticipants && chain.status === "open") {
-      console.log(
-        `Auto-triggering matching for chain ${id} with ${newParticipantCount} participants`
-      );
-
-      try {
-        // Run the matching algorithm
-        const matchResult = await runMatching(id);
-
-        if (matchResult.success) {
-          console.log(`Auto-matching completed successfully for chain ${id}`);
-
-          // Send notifications to all participants
-          try {
-            await notifyMatchingComplete(id);
-          } catch (notifyError) {
-            console.error("Error sending matching notifications:", notifyError);
-          }
-        } else {
-          console.error(
-            `Auto-matching failed for chain ${id}:`,
-            matchResult.error
-          );
-        }
-      } catch (matchError) {
-        console.error("Error during auto-matching:", matchError);
-      }
-    }
+    // Note: Auto-matching has been removed. Chain creators must manually start matching
+    // when they're ready by clicking the "Start Matching" button.
 
     // Award points for joining the chain
     try {
