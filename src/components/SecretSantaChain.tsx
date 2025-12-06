@@ -82,8 +82,11 @@ interface ChainParticipation {
     id: string;
     name: string;
     status: string;
-    gift_deadline: string;
+    join_deadline: string;
     reveal_date: string;
+    min_amount?: number;
+    max_amount?: number;
+    currency?: string;
   };
   assigned_recipient?: {
     fid: number;
@@ -128,10 +131,12 @@ export default function SecretSantaChain() {
   };
 
   const fetchChains = useCallback(async () => {
+    console.log("[fetchChains] Starting fetch, user FID:", user?.fid);
     setIsLoading(true);
     try {
       const res = await fetch("/api/chains");
       const data = await res.json();
+      console.log("[fetchChains] Chains response:", data);
       if (data.success) {
         // Also fetch user's participations to mark joined chains
         if (user?.fid) {
@@ -139,11 +144,33 @@ export default function SecretSantaChain() {
             `/api/user/participations?fid=${user.fid}`
           );
           const participationsData = await participationsRes.json();
+          console.log(
+            "[fetchChains] Participations response:",
+            participationsData
+          );
           if (participationsData.success && participationsData.participations) {
-            const joinedChainIds = new Set(
+            // Handle case where chain might be returned as array (Supabase quirk)
+            const normalizedParticipations =
               participationsData.participations.map(
+                (
+                  p: ChainParticipation & {
+                    chain:
+                      | ChainParticipation["chain"]
+                      | ChainParticipation["chain"][];
+                  }
+                ) => ({
+                  ...p,
+                  chain: Array.isArray(p.chain) ? p.chain[0] : p.chain,
+                })
+              );
+            const joinedChainIds = new Set(
+              normalizedParticipations.map(
                 (p: ChainParticipation) => p.chain_id
               )
+            );
+            console.log(
+              "[fetchChains] Joined chain IDs:",
+              Array.from(joinedChainIds)
             );
             // Mark chains as joined
             const chainsWithJoinStatus = (data.chains || []).map(
@@ -154,28 +181,43 @@ export default function SecretSantaChain() {
             );
             setChains(chainsWithJoinStatus);
             // Also update participations state
-            setMyParticipations(participationsData.participations);
+            setMyParticipations(normalizedParticipations);
+            console.log(
+              "[fetchChains] Set participations:",
+              normalizedParticipations.length
+            );
           } else {
+            console.log(
+              "[fetchChains] No participations, setting chains without join status"
+            );
             setChains(data.chains || []);
           }
         } else {
+          console.log(
+            "[fetchChains] No user FID, setting chains without join status"
+          );
           setChains(data.chains || []);
         }
       }
     } catch (e) {
-      console.error(e);
+      console.error("[fetchChains] Error:", e);
     } finally {
       setIsLoading(false);
     }
   }, [user?.fid]);
 
   const fetchMyGifts = useCallback(async () => {
-    if (!user?.fid) return;
+    if (!user?.fid) {
+      console.log("[fetchMyGifts] No user FID, skipping fetch");
+      return;
+    }
+    console.log("[fetchMyGifts] Fetching for FID:", user.fid);
     setIsLoading(true);
     try {
       // Fetch gifts
       const giftsRes = await fetch(`/api/gifts?userFid=${user.fid}`);
       const giftsData = await giftsRes.json();
+      console.log("[fetchMyGifts] Gifts response:", giftsData);
       if (giftsData.gifts) {
         const transformedGifts = giftsData.gifts.map((gift: Gift) => ({
           ...gift,
@@ -190,11 +232,37 @@ export default function SecretSantaChain() {
         `/api/user/participations?fid=${user.fid}`
       );
       const participationsData = await participationsRes.json();
+      console.log(
+        "[fetchMyGifts] Participations response:",
+        participationsData
+      );
       if (participationsData.success && participationsData.participations) {
-        setMyParticipations(participationsData.participations);
+        // Handle case where chain might be returned as array (Supabase quirk)
+        const normalizedParticipations = participationsData.participations.map(
+          (
+            p: ChainParticipation & {
+              chain:
+                | ChainParticipation["chain"]
+                | ChainParticipation["chain"][];
+            }
+          ) => ({
+            ...p,
+            chain: Array.isArray(p.chain) ? p.chain[0] : p.chain,
+          })
+        );
+        console.log(
+          "[fetchMyGifts] Normalized participations:",
+          normalizedParticipations
+        );
+        setMyParticipations(normalizedParticipations);
+      } else {
+        console.log(
+          "[fetchMyGifts] No participations found or error:",
+          participationsData
+        );
       }
     } catch (e) {
-      console.error(e);
+      console.error("[fetchMyGifts] Error:", e);
     } finally {
       setIsLoading(false);
     }

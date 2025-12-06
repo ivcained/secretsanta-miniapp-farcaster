@@ -44,11 +44,11 @@ export async function GET(request: NextRequest) {
         assigned_recipient_fid,
         has_sent_gift,
         joined_at,
-        chain:gift_chains!chain_participants_chain_id_fkey(
+        chain:gift_chains(
           id,
           name,
           status,
-          gift_deadline,
+          join_deadline,
           reveal_date,
           min_amount,
           max_amount,
