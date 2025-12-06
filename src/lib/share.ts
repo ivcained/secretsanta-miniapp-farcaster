@@ -10,8 +10,7 @@ export interface ShareOptions {
 }
 
 // App URL for embeds
-const APP_URL =
-  process.env.NEXT_PUBLIC_URL || "https://secret-santa-chain.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_URL || "https://secretsanta.quest";
 
 /**
  * Get share parameters for joining a chain
@@ -199,7 +198,6 @@ export async function copyToClipboard(text: string): Promise<boolean> {
  * Generate a shareable link for a chain
  */
 export function getChainShareLink(chainId: string): string {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_URL || "https://secret-santa-chain.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_URL || "https://secretsanta.quest";
   return `${baseUrl}?chain=${chainId}`;
 }
