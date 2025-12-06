@@ -76,6 +76,7 @@ export function ChainCard({
   const spotsLeft = chain.max_participants - chain.current_participants;
   const isFull = spotsLeft <= 0;
   const isOpen = chain.status === "open";
+  const isActive = chain.status === "active";
   const isCreator = currentUserFid && chain.creator_fid === currentUserFid;
   const minParticipants = chain.min_participants || 2;
   const canStartMatching =
@@ -216,6 +217,14 @@ export function ChainCard({
               <span>✓</span>
               <span>You're In!</span>
               <span>🎄</span>
+            </div>
+          )}
+
+          {/* Active Chain Message */}
+          {isActive && !isJoined && (
+            <div className="w-full py-3 text-center bg-purple-100 rounded-full text-purple-700 font-semibold flex items-center justify-center gap-2">
+              <span>🎁</span>
+              <span>Matching Complete - Gifting in Progress!</span>
             </div>
           )}
 

@@ -29,6 +29,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log(
+      `[Participations] Fetching participations for FID ${fidNumber}`
+    );
+
     // Get all participations for this user with chain and recipient info
     const { data: participations, error } = await supabaseAdmin
       .from("chain_participants")
@@ -56,12 +60,17 @@ export async function GET(request: NextRequest) {
       .order("joined_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching participations:", error);
+      console.error("[Participations] Error fetching participations:", error);
       return NextResponse.json(
         { error: "Failed to fetch participations" },
         { status: 500 }
       );
     }
+
+    console.log(
+      `[Participations] Found ${participations?.length || 0} participations:`,
+      JSON.stringify(participations, null, 2)
+    );
 
     // Get recipient info for each participation that has an assigned recipient
     const participationsWithRecipients = await Promise.all(

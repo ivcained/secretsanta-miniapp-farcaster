@@ -24,12 +24,12 @@ const createChainSchema = z.object({
 });
 
 /**
- * GET /api/chains - List all open chains
+ * GET /api/chains - List chains (open and active by default)
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const status = searchParams.get("status") || "open";
+    const statusParam = searchParams.get("status");
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
@@ -37,12 +37,23 @@ export async function GET(request: NextRequest) {
     let chains;
     let error;
 
-    const result = await supabaseAdmin
+    // If no status specified, get both open and active chains
+    // If status is specified, filter by that status
+    let query = supabaseAdmin
       .from("gift_chains")
       .select("*")
-      .eq("status", status)
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
+
+    if (statusParam) {
+      // Single status filter
+      query = query.eq("status", statusParam);
+    } else {
+      // Default: show open and active chains (not revealed or completed)
+      query = query.in("status", ["open", "active"]);
+    }
+
+    const result = await query;
 
     chains = result.data;
     error = result.error;
