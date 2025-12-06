@@ -64,7 +64,7 @@ const FAQS = [
   {
     question: "What is a quality score?",
     answer:
-      "Your quality score is calculated by Neynar based on your Farcaster activity. A score of 0.7 or higher is required to participate, which helps prevent spam and ensures genuine participants.",
+      "Your quality score is calculated by Neynar based on your Farcaster activity. A score of 0.28 or higher is required to participate, which helps prevent spam and ensures genuine participants.",
   },
   {
     question: "What currencies can I use?",

@@ -93,5 +93,5 @@ export function isSessionValid(session: AuthSession | null): boolean {
  * Get the minimum required Neynar score
  */
 export function getMinimumScore(): number {
-  return parseFloat(process.env.NEYNAR_MIN_USER_SCORE || "0.7");
+  return parseFloat(process.env.NEYNAR_MIN_USER_SCORE || "0.28");
 }

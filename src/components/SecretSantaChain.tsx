@@ -269,7 +269,7 @@ export default function SecretSantaChain() {
               {user?.neynarScore?.toFixed(2) || "N/A"}
             </span>
             <br />
-            <span className="text-sm">(need 0.7+ to join)</span>
+            <span className="text-sm">(need 0.28+ to join)</span>
           </p>
           <AuthButton />
         </div>

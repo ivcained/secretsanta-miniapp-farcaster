@@ -118,7 +118,7 @@ export const NotificationMessages = {
     title: "Score Too Low",
     message: `Your Neynar score (${score.toFixed(
       2
-    )}) is below the required 0.7.`,
+    )}) is below the required 0.28.`,
   }),
 };
 

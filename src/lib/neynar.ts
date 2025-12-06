@@ -5,7 +5,7 @@
 
 const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
 const NEYNAR_BASE_URL = "https://api.neynar.com";
-const MIN_USER_SCORE = parseFloat(process.env.NEYNAR_MIN_USER_SCORE || "0.7");
+const MIN_USER_SCORE = parseFloat(process.env.NEYNAR_MIN_USER_SCORE || "0.28");
 
 // Types for Neynar API responses
 export interface NeynarUser {

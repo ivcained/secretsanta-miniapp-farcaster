@@ -13,7 +13,7 @@ interface ProtectedRouteProps {
 /**
  * Protected Route Component
  * Wraps content that requires authentication
- * Optionally requires valid Neynar score (0.7+)
+ * Optionally requires valid Neynar score (0.28+)
  */
 export function ProtectedRoute({
   children,
@@ -62,7 +62,7 @@ export function ProtectedRoute({
           </h2>
           <p className="text-muted-foreground mb-4">
             Your Neynar score ({user?.neynarScore.toFixed(2)}) is below the
-            minimum required (0.7) to participate in gift chains.
+            minimum required (0.28) to participate in gift chains.
           </p>
           <p className="text-sm text-muted-foreground">
             Improve your Farcaster activity to increase your score:

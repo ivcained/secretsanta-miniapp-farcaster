@@ -47,8 +47,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Minimum score required (0.7)
-const MIN_SCORE = 0.7;
+// Minimum score required (0.28)
+const MIN_SCORE = 0.28;
 
 interface AuthProviderProps {
   children: ReactNode;
