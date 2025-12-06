@@ -7,26 +7,28 @@
   "baseBuilder": {
     "ownerAddress": "0xF928350196dFb7e9D7e0391180B7fbe25c7cdC98"
   },
-  "miniapp": {
+  "frame": {
     "version": "1",
     "name": "Secret Santa",
     "homeUrl": "https://secretsanta.quest",
     "iconUrl": "https://secretsanta.quest/icon.png",
-    "splashImageUrl": "https://secretsanta.quest/splash.png",
-    "splashBackgroundColor": "#000000",
-    "subtitle": "Farcaster Secret Santa",
-    "description": "It's the Season of love and joy.",
+    "imageUrl": "https://secretsanta.quest/banner.png",
+    "splashImageUrl": "https://secretsanta.quest/icon.png",
+    "splashBackgroundColor": "#dc2626",
+    "subtitle": "The art of Gifting",
+    "description": "Anonymous gift-giving magic for Farcaster! Create or join Secret Santa chains, send anonymous gifts, and spread holiday cheer.",
     "screenshotUrls": [
       "https://secretsanta.quest/screen1.png",
       "https://secretsanta.quest/screen2.png",
       "https://secretsanta.quest/screen3.png"
     ],
     "primaryCategory": "entertainment",
-    "tags": ["secretsanta, christmas, santa, xmas, holidays"],
+    "tags": ["santa", "secretsanta", "xmas", "christmas", "holidays"],
     "heroImageUrl": "https://secretsanta.quest/hero.png",
-    "tagline": "Farcaster Secret Santa",
-    "ogTitle": "Secret Santa",
-    "ogDescription": "Tis the Season of Love and Joy.",
-    "ogImageUrl": "https://secretsanta.quest/hero.png"
+    "tagline": "The art of Gifting",
+    "ogTitle": "Secret Santa Chain",
+    "ogDescription": "Anonymous gift-giving magic for Farcaster!",
+    "ogImageUrl": "https://secretsanta.quest/banner.png",
+    "webhookUrl": "https://api.neynar.com/f/app/239d30cd-d7eb-48f5-982c-370a27c4e6ac/event"
   }
 }

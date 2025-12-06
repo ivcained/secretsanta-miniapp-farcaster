@@ -2,6 +2,7 @@
 
 import { useCallback, useState, useEffect } from "react";
 import { useAddFrame } from "@coinbase/onchainkit/minikit";
+import { sdk } from "@farcaster/miniapp-sdk";
 import { useFrameContext } from "~/components/providers/FrameProvider";
 import { Button } from "~/components/ui/Button";
 
@@ -14,6 +15,8 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
   const [isAnimating, setIsAnimating] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const addFrame = useAddFrame();
   const frameContext = useFrameContext();
@@ -27,6 +30,13 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
   useEffect(() => {
     // Don't show if already added or dismissed
     if (isAlreadyAdded || dismissed) {
+      return;
+    }
+
+    // Check localStorage to see if user has already added the miniapp
+    const hasAdded = localStorage.getItem("miniAppAdded");
+    if (hasAdded === "true") {
+      setDismissed(true);
       return;
     }
 
@@ -48,37 +58,94 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
 
   const handleAddFrame = useCallback(async (): Promise<void> => {
     setLoading(true);
+    setError(null);
 
     try {
-      const notificationDetails = await addFrame();
+      console.log("[AddFrame] Starting addFrame call...");
+      console.log("[AddFrame] Frame context:", frameContext);
 
-      if (notificationDetails) {
+      // Try using OnchainKit's addFrame first
+      let result = null;
+      try {
+        result = await addFrame();
+        console.log("[AddFrame] OnchainKit result:", result);
+      } catch (onchainErr) {
+        console.log(
+          "[AddFrame] OnchainKit failed, trying Farcaster SDK:",
+          onchainErr
+        );
+      }
+
+      // If OnchainKit didn't work, try Farcaster SDK directly
+      if (!result) {
+        try {
+          console.log("[AddFrame] Trying Farcaster SDK addFrame...");
+          const sdkResult = await sdk.actions.addFrame();
+          console.log("[AddFrame] Farcaster SDK result:", sdkResult);
+
+          if (sdkResult) {
+            result = sdkResult;
+          }
+        } catch (sdkErr) {
+          console.log("[AddFrame] Farcaster SDK also failed:", sdkErr);
+        }
+      }
+
+      if (result) {
         // Store the notification token for push notifications
         const context = frameContext?.context as
           | { user?: { fid?: number } }
           | undefined;
         const userFid = context?.user?.fid;
-        if (userFid && notificationDetails.token && notificationDetails.url) {
+
+        // Check if result has notification details
+        const notificationDetails = result as
+          | {
+              token?: string;
+              url?: string;
+              notificationDetails?: { token: string; url: string };
+            }
+          | undefined;
+
+        const token =
+          notificationDetails?.token ||
+          notificationDetails?.notificationDetails?.token;
+        const url =
+          notificationDetails?.url ||
+          notificationDetails?.notificationDetails?.url;
+
+        if (userFid && token && url) {
           try {
             await fetch("/api/notifications/token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 userFid,
-                token: notificationDetails.token,
-                url: notificationDetails.url,
+                token,
+                url,
               }),
             });
-            console.log("Notification token stored successfully");
+            console.log("[AddFrame] Notification token stored successfully");
           } catch (tokenErr) {
-            console.error("Failed to store notification token:", tokenErr);
+            console.error(
+              "[AddFrame] Failed to store notification token:",
+              tokenErr
+            );
           }
         }
-        // Successfully added, close the prompt
-        handleClose();
+        // Successfully added - save to localStorage so we don't show again
+        localStorage.setItem("miniAppAdded", "true");
+        setSuccess(true);
+        setTimeout(() => {
+          handleClose();
+        }, 1500);
+      } else {
+        console.log("[AddFrame] No result returned, user may have cancelled");
+        setError("Could not add mini app. Please try again.");
       }
     } catch (err) {
-      console.error("Failed to add frame:", err);
+      console.error("[AddFrame] Failed to add frame:", err);
+      setError(err instanceof Error ? err.message : "Failed to add mini app");
     } finally {
       setLoading(false);
     }
@@ -128,58 +195,86 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
 
           {/* Content */}
           <div className="text-center space-y-4">
-            {/* Icon */}
-            <div className="flex justify-center">
-              <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center shadow-lg">
-                <span className="text-3xl">🎅</span>
-              </div>
-            </div>
+            {success ? (
+              // Success State
+              <>
+                <div className="flex justify-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-3xl">✓</span>
+                  </div>
+                </div>
+                <h2 className="text-xl font-bold text-green-600">
+                  Added Successfully!
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  You'll now receive notifications about your Secret Santa
+                  chains! 🎄
+                </p>
+              </>
+            ) : (
+              // Default State
+              <>
+                {/* Icon */}
+                <div className="flex justify-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-red-500 to-green-500 rounded-2xl flex items-center justify-center shadow-lg">
+                    <span className="text-3xl">🎅</span>
+                  </div>
+                </div>
 
-            {/* Title */}
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              Add Secret Santa
-            </h2>
+                {/* Title */}
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                  Add Secret Santa
+                </h2>
 
-            {/* Description */}
-            <p className="text-gray-600 dark:text-gray-400 text-sm max-w-xs mx-auto">
-              Add this mini app to your Farcaster client for quick access and to
-              receive notifications about your Secret Santa chains!
-            </p>
+                {/* Description */}
+                <p className="text-gray-600 dark:text-gray-400 text-sm max-w-xs mx-auto">
+                  Add this mini app to your Farcaster client for quick access
+                  and to receive notifications about your Secret Santa chains!
+                </p>
 
-            {/* Benefits */}
-            <div className="flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex items-center gap-1">
-                <span>🔔</span>
-                <span>Notifications</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span>⚡</span>
-                <span>Quick Access</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span>🎁</span>
-                <span>Gift Alerts</span>
-              </div>
-            </div>
+                {/* Benefits */}
+                <div className="flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex items-center gap-1">
+                    <span>🔔</span>
+                    <span>Notifications</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>⚡</span>
+                    <span>Quick Access</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>🎁</span>
+                    <span>Gift Alerts</span>
+                  </div>
+                </div>
 
-            {/* Buttons */}
-            <div className="space-y-3 pt-2">
-              <Button
-                onClick={handleAddFrame}
-                disabled={loading}
-                isLoading={loading}
-                className="w-full bg-gradient-to-r from-red-500 to-green-500 hover:from-red-600 hover:to-green-600 text-white font-semibold py-3 rounded-xl"
-              >
-                Add Mini App
-              </Button>
+                {/* Error Message */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-600 px-3 py-2 rounded-lg text-xs">
+                    {error}
+                  </div>
+                )}
 
-              <button
-                onClick={handleDismiss}
-                className="w-full text-gray-500 dark:text-gray-400 text-sm py-2 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-              >
-                Maybe Later
-              </button>
-            </div>
+                {/* Buttons */}
+                <div className="space-y-3 pt-2">
+                  <Button
+                    onClick={handleAddFrame}
+                    disabled={loading}
+                    isLoading={loading}
+                    className="w-full bg-gradient-to-r from-red-500 to-green-500 hover:from-red-600 hover:to-green-600 text-white font-semibold py-3 rounded-xl"
+                  >
+                    {loading ? "Adding..." : "Add Mini App"}
+                  </Button>
+
+                  <button
+                    onClick={handleDismiss}
+                    className="w-full text-gray-500 dark:text-gray-400 text-sm py-2 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    Maybe Later
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
