@@ -41,6 +41,16 @@ export async function GET() {
       noindex: false,
       tags: ["santa", "secretsanta", "xmas", "christmas", "holidays"],
       primaryCategory: "entertainment",
+      webhookUrl:
+        "https://api.neynar.com/f/app/239d30cd-d7eb-48f5-982c-370a27c4e6ac/event",
+      subtitle: "The art of Gifting Tis Season of Joy.",
+      screenshotUrls: [
+        "https://secretsanta.quest/screen1.png",
+        "https://secretsanta.quest/screen2.png",
+        "https://secretsanta.quest/screen3.png",
+      ],
+      heroImageUrl: "https://secretsanta.quest/hero.png",
+      tagline: "The art of Gifting",
     },
     baseBuilder: {
       allowedAddresses: ["0xF928350196dFb7e9D7e0391180B7fbe25c7cdC98"],
