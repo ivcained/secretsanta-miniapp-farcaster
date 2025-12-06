@@ -32,7 +32,7 @@ export function CreateChainModal({
     name: "",
     description: "",
     theme: "General",
-    minParticipants: 3,
+    minParticipants: 2,
     maxParticipants: 20,
     minAmount: 10,
     maxAmount: 50,

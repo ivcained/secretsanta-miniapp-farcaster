@@ -27,12 +27,14 @@ interface GiftChain {
   theme: string;
   current_participants: number;
   max_participants: number;
+  min_participants?: number;
   budget_min: number;
   budget_max: number;
   status: string;
   join_deadline: string;
   gift_deadline: string;
   reveal_date: string;
+  creator_fid?: number;
   isJoined?: boolean;
   myAssignment?: {
     recipientFid: number;
@@ -200,6 +202,35 @@ export default function SecretSantaChain() {
     } catch (e) {
       console.error(e);
       setJoinError("Failed to join chain");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleStartMatching = async (chainId: string) => {
+    if (!user?.fid) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/chains/${chainId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "start_matching",
+          userFid: user.fid,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh chains to show updated status
+        fetchChains();
+        // Also refresh participations to show assignments
+        fetchMyGifts();
+      } else {
+        setJoinError(data.error || "Failed to start matching");
+      }
+    } catch (e) {
+      console.error(e);
+      setJoinError("Failed to start matching");
     } finally {
       setIsLoading(false);
     }
@@ -397,7 +428,9 @@ export default function SecretSantaChain() {
                     <ChainCard
                       key={chain.id}
                       chain={chain}
+                      currentUserFid={user?.fid}
                       onJoin={handleJoin}
+                      onStartMatching={handleStartMatching}
                       isLoading={isLoading}
                     />
                   ))}

@@ -11,23 +11,29 @@ interface ChainCardProps {
     theme: string;
     current_participants: number;
     max_participants: number;
+    min_participants?: number;
     budget_min: number;
     budget_max: number;
     status: string;
     join_deadline: string;
     gift_deadline: string;
     reveal_date: string;
+    creator_fid?: number;
   };
+  currentUserFid?: number;
   onJoin?: (chainId: string) => void;
   onView?: (chainId: string) => void;
+  onStartMatching?: (chainId: string) => void;
   isJoined?: boolean;
   isLoading?: boolean;
 }
 
 export function ChainCard({
   chain,
+  currentUserFid,
   onJoin,
   onView,
+  onStartMatching,
   isJoined,
   isLoading,
 }: ChainCardProps) {
@@ -70,6 +76,10 @@ export function ChainCard({
   const spotsLeft = chain.max_participants - chain.current_participants;
   const isFull = spotsLeft <= 0;
   const isOpen = chain.status === "open";
+  const isCreator = currentUserFid && chain.creator_fid === currentUserFid;
+  const minParticipants = chain.min_participants || 2;
+  const canStartMatching =
+    isCreator && isOpen && chain.current_participants >= minParticipants;
 
   const handleJoin = () => {
     if (onJoin && !isFull && !isLoading) {
@@ -150,47 +160,78 @@ export function ChainCard({
           </div>
         </div>
 
-        {/* Action Button */}
-        {isOpen && !isJoined && onJoin && (
-          <button
-            onClick={handleJoin}
-            disabled={isFull || isLoading}
-            className={`w-full btn-christmas py-3 text-base ${
-              isFull ? "opacity-50 cursor-not-allowed" : "pulse-glow"
-            }`}
-          >
-            {isLoading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="animate-spin">🎄</span>
-                Joining...
-              </span>
-            ) : isFull ? (
-              "Chain Full"
-            ) : (
-              "🎅 Join Chain"
-            )}
-          </button>
-        )}
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          {/* Start Matching Button for Creator */}
+          {canStartMatching && onStartMatching && (
+            <button
+              onClick={() => {
+                sounds.playClick();
+                onStartMatching(chain.id);
+              }}
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 rounded-xl shadow-lg transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin">⚡</span>
+                  Starting...
+                </span>
+              ) : (
+                <>
+                  <span>⚡</span>
+                  <span>
+                    Start Matching ({chain.current_participants} ready)
+                  </span>
+                </>
+              )}
+            </button>
+          )}
 
-        {isJoined && (
-          <div className="w-full py-3 text-center bg-green-100 rounded-full text-green-700 font-semibold flex items-center justify-center gap-2">
-            <span>✓</span>
-            <span>You're In!</span>
-            <span>🎄</span>
-          </div>
-        )}
+          {/* Join Button */}
+          {isOpen && !isJoined && onJoin && (
+            <button
+              onClick={handleJoin}
+              disabled={isFull || isLoading}
+              className={`w-full btn-christmas py-3 text-base ${
+                isFull ? "opacity-50 cursor-not-allowed" : "pulse-glow"
+              }`}
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="animate-spin">🎄</span>
+                  Joining...
+                </span>
+              ) : isFull ? (
+                "Chain Full"
+              ) : (
+                "🎅 Join Chain"
+              )}
+            </button>
+          )}
 
-        {onView && !isOpen && (
-          <button
-            onClick={() => {
-              sounds.playClick();
-              onView(chain.id);
-            }}
-            className="w-full btn-christmas-green btn-christmas py-3 text-base"
-          >
-            View Details
-          </button>
-        )}
+          {/* Already Joined Badge */}
+          {isJoined && (
+            <div className="w-full py-3 text-center bg-green-100 rounded-full text-green-700 font-semibold flex items-center justify-center gap-2">
+              <span>✓</span>
+              <span>You're In!</span>
+              <span>🎄</span>
+            </div>
+          )}
+
+          {/* View Details Button */}
+          {onView && !isOpen && (
+            <button
+              onClick={() => {
+                sounds.playClick();
+                onView(chain.id);
+              }}
+              className="w-full btn-christmas-green btn-christmas py-3 text-base"
+            >
+              View Details
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

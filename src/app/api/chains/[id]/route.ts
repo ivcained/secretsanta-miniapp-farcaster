@@ -192,13 +192,47 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .eq("id", id)
       .single();
 
+    const newParticipantCount = (currentChain?.current_participants || 0) + 1;
+
     if (currentChain) {
       await supabaseAdmin
         .from("gift_chains")
         .update({
-          current_participants: (currentChain.current_participants || 0) + 1,
+          current_participants: newParticipantCount,
         })
         .eq("id", id);
+    }
+
+    // Check if we should auto-trigger matching
+    // Auto-match when minimum participants is reached (default min is 2)
+    const minParticipants = chain.min_participants || 2;
+    if (newParticipantCount >= minParticipants && chain.status === "open") {
+      console.log(
+        `Auto-triggering matching for chain ${id} with ${newParticipantCount} participants`
+      );
+
+      try {
+        // Run the matching algorithm
+        const matchResult = await runMatching(id);
+
+        if (matchResult.success) {
+          console.log(`Auto-matching completed successfully for chain ${id}`);
+
+          // Send notifications to all participants
+          try {
+            await notifyMatchingComplete(id);
+          } catch (notifyError) {
+            console.error("Error sending matching notifications:", notifyError);
+          }
+        } else {
+          console.error(
+            `Auto-matching failed for chain ${id}:`,
+            matchResult.error
+          );
+        }
+      } catch (matchError) {
+        console.error("Error during auto-matching:", matchError);
+      }
     }
 
     // Award points for joining the chain

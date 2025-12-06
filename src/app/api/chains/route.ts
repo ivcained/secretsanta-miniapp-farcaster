@@ -17,7 +17,7 @@ const createChainSchema = z.object({
   minAmount: z.number().positive(),
   maxAmount: z.number().positive(),
   currency: z.enum(["ETH", "USDC"]).default("ETH"),
-  minParticipants: z.number().min(2).max(100).default(3),
+  minParticipants: z.number().min(2).max(100).default(2),
   maxParticipants: z.number().min(2).max(100).default(50),
   joinDeadline: z.string().datetime(),
   revealDate: z.string().datetime(),
@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
       theme: "holiday", // Default theme
       current_participants: countMap.get(chain.id) || 0,
       max_participants: chain.max_participants,
+      min_participants: chain.min_participants || 2,
       budget_min: chain.min_amount,
       budget_max: chain.max_amount,
       status: chain.status,
