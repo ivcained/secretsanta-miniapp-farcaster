@@ -53,6 +53,27 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
       const notificationDetails = await addFrame();
 
       if (notificationDetails) {
+        // Store the notification token for push notifications
+        const context = frameContext?.context as
+          | { user?: { fid?: number } }
+          | undefined;
+        const userFid = context?.user?.fid;
+        if (userFid && notificationDetails.token && notificationDetails.url) {
+          try {
+            await fetch("/api/notifications/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userFid,
+                token: notificationDetails.token,
+                url: notificationDetails.url,
+              }),
+            });
+            console.log("Notification token stored successfully");
+          } catch (tokenErr) {
+            console.error("Failed to store notification token:", tokenErr);
+          }
+        }
         // Successfully added, close the prompt
         handleClose();
       }
@@ -61,7 +82,7 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
     } finally {
       setLoading(false);
     }
-  }, [addFrame]);
+  }, [addFrame, frameContext]);
 
   const handleClose = useCallback(() => {
     setIsVisible(false);

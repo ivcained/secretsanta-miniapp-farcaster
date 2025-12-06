@@ -7,6 +7,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { validateUserScore } from "@/lib/neynar";
 import { runMatching } from "@/lib/matching";
+import { awardChainJoinPoints } from "@/lib/points";
+import {
+  notifyChainJoin,
+  notifyMatchingComplete,
+  notifyRevealTime,
+} from "@/lib/push-notifications";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -195,6 +201,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .eq("id", id);
     }
 
+    // Award points for joining the chain
+    try {
+      await awardChainJoinPoints(userFid, id);
+    } catch (pointsError) {
+      console.error("Error awarding join points:", pointsError);
+    }
+
+    // Send notifications to chain creator and other participants
+    try {
+      const username = neynarUser?.username || `FID:${userFid}`;
+      await notifyChainJoin(id, userFid, username);
+    } catch (notifyError) {
+      console.error("Error sending join notification:", notifyError);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Successfully joined the chain",
@@ -271,6 +292,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: result.error }, { status: 500 });
       }
 
+      // Send notifications to all participants
+      try {
+        await notifyMatchingComplete(id);
+      } catch (notifyError) {
+        console.error("Error sending matching notifications:", notifyError);
+      }
+
       return NextResponse.json({
         success: true,
         message: "Matching completed successfully",
@@ -304,6 +332,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         .from("gifts")
         .update({ is_revealed: true, revealed_at: new Date().toISOString() })
         .eq("chain_id", id);
+
+      // Send reveal notifications to all participants
+      try {
+        await notifyRevealTime(id);
+      } catch (notifyError) {
+        console.error("Error sending reveal notifications:", notifyError);
+      }
 
       return NextResponse.json({
         success: true,

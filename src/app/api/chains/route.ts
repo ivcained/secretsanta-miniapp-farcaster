@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { validateUserScore } from "@/lib/neynar";
+import { awardChainCreatePoints, awardChainJoinPoints } from "@/lib/points";
 import { z } from "zod";
 
 // Validation schema for creating a chain
@@ -235,6 +236,15 @@ export async function POST(request: NextRequest) {
         .from("gift_chains")
         .update({ current_participants: 1 })
         .eq("id", chain.id);
+    }
+
+    // Award points for creating a chain
+    try {
+      await awardChainCreatePoints(data.creatorFid, chain.id);
+      await awardChainJoinPoints(data.creatorFid, chain.id);
+    } catch (pointsError) {
+      console.error("Error awarding points:", pointsError);
+      // Don't fail the request for points errors
     }
 
     return NextResponse.json(

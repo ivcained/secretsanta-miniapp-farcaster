@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { validateUserScore } from "@/lib/neynar";
+import { awardGiftSentPoints, awardGiftReceivedPoints } from "@/lib/points";
+import { notifyGiftSent } from "@/lib/push-notifications";
 import { z } from "zod";
 
 // Validation schema for sending a gift
@@ -224,6 +226,21 @@ export async function POST(request: NextRequest) {
       .update({ has_sent_gift: true })
       .eq("chain_id", data.chainId)
       .eq("user_fid", data.senderFid);
+
+    // Award points for sending and receiving gifts
+    try {
+      await awardGiftSentPoints(data.senderFid, gift.id);
+      await awardGiftReceivedPoints(data.recipientFid, gift.id);
+    } catch (pointsError) {
+      console.error("Error awarding gift points:", pointsError);
+    }
+
+    // Send notification to recipient
+    try {
+      await notifyGiftSent(data.recipientFid, chain.name);
+    } catch (notifyError) {
+      console.error("Error sending gift notification:", notifyError);
+    }
 
     return NextResponse.json(
       {
