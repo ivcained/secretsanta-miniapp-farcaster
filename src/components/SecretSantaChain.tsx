@@ -735,8 +735,48 @@ export default function SecretSantaChain() {
             recipientUsername={sendGiftModal.recipientUsername}
             onClose={() => setSendGiftModal(null)}
             onSend={async (giftId, data) => {
-              // Handle send gift
-              console.log("Sending gift:", giftId, data);
+              if (!user?.fid) return;
+
+              try {
+                // Map the gift_type from modal to API expected format
+                const giftTypeMap: Record<string, string> = {
+                  digital: "crypto",
+                  physical: "message",
+                  experience: "message",
+                  donation: "message",
+                  other: "message",
+                };
+
+                const response = await fetch("/api/gifts", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    chainId: sendGiftModal.chainId,
+                    senderFid: user.fid,
+                    recipientFid: sendGiftModal.recipientFid,
+                    giftType: giftTypeMap[data.gift_type] || "message",
+                    message: data.message,
+                    amount: data.gift_value
+                      ? parseFloat(data.gift_value)
+                      : undefined,
+                  }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                  console.log("Gift sent successfully:", result);
+                  // Refresh participations to show updated status
+                  fetchMyGifts();
+                } else {
+                  console.error("Failed to send gift:", result.error);
+                  setJoinError(result.error || "Failed to send gift");
+                }
+              } catch (error) {
+                console.error("Error sending gift:", error);
+                setJoinError("Failed to send gift");
+              }
+
               setSendGiftModal(null);
             }}
           />
