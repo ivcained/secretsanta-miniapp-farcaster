@@ -1,19 +1,22 @@
 /**
  * Gift Log API Route
- * Returns all revealed gifts for the public gift log
+ * Returns all gifts for the public gift log
+ * Sender info is hidden for unrevealed gifts
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 
 /**
- * GET /api/gifts/log - Get all revealed gifts for the gift log
+ * GET /api/gifts/log - Get all gifts for the gift log
+ * Shows all gifts but hides sender info for unrevealed ones
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const chainId = searchParams.get("chainId");
     const limit = parseInt(searchParams.get("limit") || "50");
+    const onlyRevealed = searchParams.get("onlyRevealed") === "true";
 
     let query = supabaseAdmin
       .from("gifts")
@@ -27,14 +30,19 @@ export async function GET(request: NextRequest) {
         message,
         is_revealed,
         sent_at,
+        sender_fid,
+        recipient_fid,
         sender:users!gifts_sender_fid_fkey(fid, username, display_name, pfp_url),
         recipient:users!gifts_recipient_fid_fkey(fid, username, display_name, pfp_url),
         chain:gift_chains!gifts_chain_id_fkey(id, name, status)
       `
       )
-      .eq("is_revealed", true)
       .order("sent_at", { ascending: false })
       .limit(limit);
+
+    if (onlyRevealed) {
+      query = query.eq("is_revealed", true);
+    }
 
     if (chainId) {
       query = query.eq("chain_id", chainId);
@@ -50,9 +58,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Process gifts to hide sender info for unrevealed gifts
+    const processedGifts = (gifts || []).map((gift) => {
+      if (!gift.is_revealed) {
+        return {
+          ...gift,
+          sender: {
+            fid: null,
+            username: "???",
+            display_name: "Secret Santa 🎅",
+            pfp_url: "/icon.png",
+          },
+          sender_fid: null,
+        };
+      }
+      return gift;
+    });
+
     return NextResponse.json({
-      gifts: gifts || [],
-      count: gifts?.length || 0,
+      gifts: processedGifts,
+      count: processedGifts.length,
     });
   } catch (error) {
     console.error("Error in GET /api/gifts/log:", error);

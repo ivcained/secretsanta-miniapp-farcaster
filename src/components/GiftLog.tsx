@@ -32,10 +32,9 @@ interface GiftLogEntry {
 
 interface GiftLogProps {
   chainId?: string; // Optional: filter by chain
-  showOnlyRevealed?: boolean;
 }
 
-export function GiftLog({ chainId, showOnlyRevealed = true }: GiftLogProps) {
+export function GiftLog({ chainId }: GiftLogProps) {
   const [gifts, setGifts] = useState<GiftLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +42,7 @@ export function GiftLog({ chainId, showOnlyRevealed = true }: GiftLogProps) {
   useEffect(() => {
     const fetchGiftLog = async () => {
       try {
-        // Fetch all gifts - we'll filter revealed ones on the client
+        // Fetch all gifts - sender info is hidden for unrevealed ones by the API
         let url = "/api/gifts/log";
         if (chainId) {
           url += `?chainId=${chainId}`;
@@ -53,11 +52,7 @@ export function GiftLog({ chainId, showOnlyRevealed = true }: GiftLogProps) {
         const data = await response.json();
 
         if (data.gifts) {
-          // Filter to only show revealed gifts if specified
-          const filteredGifts = showOnlyRevealed
-            ? data.gifts.filter((g: GiftLogEntry) => g.is_revealed)
-            : data.gifts;
-          setGifts(filteredGifts);
+          setGifts(data.gifts);
         } else if (data.error) {
           setError(data.error);
         }
@@ -70,7 +65,7 @@ export function GiftLog({ chainId, showOnlyRevealed = true }: GiftLogProps) {
     };
 
     fetchGiftLog();
-  }, [chainId, showOnlyRevealed]);
+  }, [chainId]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -117,9 +112,9 @@ export function GiftLog({ chainId, showOnlyRevealed = true }: GiftLogProps) {
     return (
       <div className="text-center py-8 bg-white/80 backdrop-blur rounded-2xl">
         <div className="text-5xl mb-3">📜</div>
-        <p className="text-gray-600">No revealed gifts yet!</p>
+        <p className="text-gray-600">No gifts sent yet!</p>
         <p className="text-sm text-gray-500 mt-1">
-          Gift exchanges will appear here after the reveal date
+          Gift exchanges will appear here once people start sending gifts
         </p>
       </div>
     );
@@ -142,6 +137,13 @@ export function GiftLog({ chainId, showOnlyRevealed = true }: GiftLogProps) {
             key={gift.id}
             className="bg-white/90 backdrop-blur rounded-xl p-4 shadow-md border border-gray-100"
           >
+            {/* Unrevealed indicator */}
+            {!gift.is_revealed && (
+              <div className="mb-2 text-xs text-amber-600 bg-amber-50 rounded-full px-3 py-1 inline-flex items-center gap-1">
+                <span>🔒</span> Sender revealed on reveal date
+              </div>
+            )}
+
             {/* Gift Header */}
             <div className="flex items-center gap-3 mb-3">
               {/* Sender */}
@@ -149,16 +151,20 @@ export function GiftLog({ chainId, showOnlyRevealed = true }: GiftLogProps) {
                 <img
                   src={gift.sender?.pfp_url || "/icon.png"}
                   alt={gift.sender?.username}
-                  className="w-10 h-10 rounded-full border-2 border-red-300"
+                  className={`w-10 h-10 rounded-full border-2 ${
+                    gift.is_revealed ? "border-red-300" : "border-gray-300"
+                  }`}
                 />
                 <div>
                   <p className="font-semibold text-gray-800 text-sm">
                     {gift.sender?.display_name ||
                       gift.sender?.username ||
-                      "Anonymous"}
+                      "Secret Santa 🎅"}
                   </p>
                   <p className="text-xs text-gray-500">
-                    @{gift.sender?.username || "???"}
+                    {gift.is_revealed
+                      ? `@${gift.sender?.username || "???"}`
+                      : "Identity hidden"}
                   </p>
                 </div>
               </div>
