@@ -12,15 +12,14 @@ import { GiftCard, SendGiftModal, ThankYouModal } from "~/components/gifts";
 import { Snowfall } from "~/components/Snowfall";
 import { SupportDeveloperModal } from "~/components/SupportDeveloperModal";
 import { HowItWorks } from "~/components/HowItWorks";
-import { Leaderboard } from "~/components/Leaderboard";
-import { GiftLog } from "~/components/GiftLog";
+import { AddFramePrompt } from "~/components/AddFramePrompt";
 import { useChristmasSounds } from "~/lib/sounds";
 import {
   getJoinChainShareParams,
   getCreateChainShareParams,
 } from "~/lib/share";
 
-type TabType = "chains" | "my-gifts" | "activity" | "leaderboard" | "profile";
+type TabType = "chains" | "my-gifts" | "faq" | "profile";
 
 interface GiftChain {
   id: string;
@@ -451,43 +450,34 @@ export default function SecretSantaChain() {
       {/* Christmas Tab Navigation */}
       <div className="px-4 mb-4 relative z-10">
         <div className="tab-christmas overflow-x-auto">
-          {(
-            [
-              "chains",
-              "my-gifts",
-              "activity",
-              "leaderboard",
-              "profile",
-            ] as TabType[]
-          ).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                sounds.playClick();
-                setActiveTab(tab);
-              }}
-              className={`tab-christmas-item flex-1 justify-center ${
-                activeTab === tab ? "active" : ""
-              }`}
-            >
-              {tab === "chains" && <span>🎄</span>}
-              {tab === "my-gifts" && <span>🎁</span>}
-              {tab === "activity" && <span>📜</span>}
-              {tab === "leaderboard" && <span>🏆</span>}
-              {tab === "profile" && <span>👤</span>}
-              <span className="hidden sm:inline">
-                {tab === "chains"
-                  ? "Chains"
-                  : tab === "my-gifts"
-                  ? "Gifts"
-                  : tab === "activity"
-                  ? "Log"
-                  : tab === "leaderboard"
-                  ? "Ranks"
-                  : "Profile"}
-              </span>
-            </button>
-          ))}
+          {(["chains", "my-gifts", "faq", "profile"] as TabType[]).map(
+            (tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  sounds.playClick();
+                  setActiveTab(tab);
+                }}
+                className={`tab-christmas-item flex-1 justify-center ${
+                  activeTab === tab ? "active" : ""
+                }`}
+              >
+                {tab === "chains" && <span>🎄</span>}
+                {tab === "my-gifts" && <span>🎁</span>}
+                {tab === "faq" && <span>❓</span>}
+                {tab === "profile" && <span>👤</span>}
+                <span className="hidden sm:inline">
+                  {tab === "chains"
+                    ? "Chains"
+                    : tab === "my-gifts"
+                    ? "Gifts"
+                    : tab === "faq"
+                    ? "FAQ"
+                    : "Profile"}
+                </span>
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -666,11 +656,7 @@ export default function SecretSantaChain() {
           </div>
         )}
 
-        {activeTab === "activity" && <GiftLog />}
-
-        {activeTab === "leaderboard" && (
-          <Leaderboard currentUserFid={user?.fid} />
-        )}
+        {activeTab === "faq" && <HowItWorks />}
 
         {activeTab === "profile" && (
           <div className="space-y-4">
@@ -812,6 +798,9 @@ export default function SecretSantaChain() {
         {showSupportModal && (
           <SupportDeveloperModal onClose={() => setShowSupportModal(false)} />
         )}
+
+        {/* Add Miniapp Prompt */}
+        <AddFramePrompt />
       </div>
     </div>
   );
