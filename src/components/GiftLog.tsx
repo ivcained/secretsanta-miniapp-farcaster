@@ -12,7 +12,7 @@ interface GiftLogEntry {
   is_revealed: boolean;
   sent_at: string;
   sender?: {
-    fid: number;
+    fid: number | null;
     username: string;
     display_name: string;
     pfp_url: string;
@@ -27,6 +27,7 @@ interface GiftLogEntry {
     id: string;
     name: string;
     status: string;
+    reveal_date?: string;
   };
 }
 
@@ -137,12 +138,32 @@ export function GiftLog({ chainId }: GiftLogProps) {
             key={gift.id}
             className="bg-white/90 backdrop-blur rounded-xl p-4 shadow-md border border-gray-100"
           >
-            {/* Unrevealed indicator */}
-            {!gift.is_revealed && (
-              <div className="mb-2 text-xs text-amber-600 bg-amber-50 rounded-full px-3 py-1 inline-flex items-center gap-1">
-                <span>🔒</span> Sender revealed on reveal date
-              </div>
-            )}
+            {/* Reveal status indicator */}
+            {(() => {
+              const revealDate = gift.chain?.reveal_date
+                ? new Date(gift.chain.reveal_date)
+                : null;
+              const revealDatePassed = revealDate && new Date() >= revealDate;
+              const senderIsHidden = gift.sender?.fid === null;
+
+              if (senderIsHidden) {
+                return (
+                  <div className="mb-2 text-xs text-amber-600 bg-amber-50 rounded-full px-3 py-1 inline-flex items-center gap-1">
+                    <span>🔒</span> Sender revealed on{" "}
+                    {revealDate
+                      ? revealDate.toLocaleDateString()
+                      : "reveal date"}
+                  </div>
+                );
+              } else if (revealDatePassed && !gift.is_revealed) {
+                return (
+                  <div className="mb-2 text-xs text-green-600 bg-green-50 rounded-full px-3 py-1 inline-flex items-center gap-1">
+                    <span>🎉</span> Revealed (reveal date passed)
+                  </div>
+                );
+              }
+              return null;
+            })()}
 
             {/* Gift Header */}
             <div className="flex items-center gap-3 mb-3">
