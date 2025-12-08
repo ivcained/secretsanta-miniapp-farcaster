@@ -61,16 +61,28 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
 
+    // Define chain type for type safety
+    type ChainInfo = {
+      id: string;
+      name: string;
+      status: string;
+      reveal_date: string;
+    };
+
     // Process gifts to hide sender info for unrevealed gifts
     // BUT if the chain's reveal_date has passed, show sender info anyway
     const processedGifts = (gifts || []).map((gift) => {
       // Check if chain's reveal date has passed
-      const chain = gift.chain as {
-        id: string;
-        name: string;
-        status: string;
-        reveal_date: string;
-      } | null;
+      // Supabase may return chain as array or single object depending on the relationship
+      const chainData = gift.chain;
+      let chain: ChainInfo | null = null;
+
+      if (Array.isArray(chainData) && chainData.length > 0) {
+        chain = chainData[0] as ChainInfo;
+      } else if (chainData && typeof chainData === "object") {
+        chain = chainData as unknown as ChainInfo;
+      }
+
       const revealDate = chain?.reveal_date
         ? new Date(chain.reveal_date)
         : null;
