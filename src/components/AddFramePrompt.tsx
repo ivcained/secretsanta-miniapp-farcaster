@@ -79,15 +79,15 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
       // If OnchainKit didn't work, try Farcaster SDK directly
       if (!result) {
         try {
-          console.log("[AddFrame] Trying Farcaster SDK addFrame...");
-          const sdkResult = await sdk.actions.addFrame();
-          console.log("[AddFrame] Farcaster SDK result:", sdkResult);
+          console.log("[AddMiniApp] Trying Farcaster SDK addMiniApp...");
+          const sdkResult = await sdk.actions.addMiniApp();
+          console.log("[AddMiniApp] Farcaster SDK result:", sdkResult);
 
           if (sdkResult) {
             result = sdkResult;
           }
         } catch (sdkErr) {
-          console.log("[AddFrame] Farcaster SDK also failed:", sdkErr);
+          console.log("[AddMiniApp] Farcaster SDK also failed:", sdkErr);
         }
       }
 
