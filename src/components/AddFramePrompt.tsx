@@ -17,6 +17,7 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
   const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [autoTriggered, setAutoTriggered] = useState(false);
 
   const addFrame = useAddFrame();
   const frameContext = useFrameContext();
@@ -27,8 +28,88 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
     "client" in frameContext.context &&
     (frameContext.context as { client?: { added?: boolean } }).client?.added;
 
+  // Auto-trigger addMiniApp when not added
+  const triggerAddMiniApp = useCallback(async () => {
+    if (autoTriggered || loading) return;
+
+    setAutoTriggered(true);
+    setLoading(true);
+
+    try {
+      console.log("[AddMiniApp] Auto-triggering addMiniApp...");
+
+      // Try Farcaster SDK's addMiniApp directly - this opens the native popup
+      const sdkResult = await sdk.actions.addMiniApp();
+      console.log("[AddMiniApp] SDK result:", sdkResult);
+
+      if (sdkResult) {
+        // Store the notification token for push notifications
+        const context = frameContext?.context as
+          | { user?: { fid?: number } }
+          | undefined;
+        const userFid = context?.user?.fid;
+
+        // Check if result has notification details
+        const notificationDetails = sdkResult as
+          | {
+              token?: string;
+              url?: string;
+              notificationDetails?: { token: string; url: string };
+            }
+          | undefined;
+
+        const token =
+          notificationDetails?.token ||
+          notificationDetails?.notificationDetails?.token;
+        const url =
+          notificationDetails?.url ||
+          notificationDetails?.notificationDetails?.url;
+
+        if (userFid && token && url) {
+          try {
+            await fetch("/api/notifications/token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userFid,
+                token,
+                url,
+              }),
+            });
+            console.log("[AddMiniApp] Notification token stored successfully");
+          } catch (tokenErr) {
+            console.error(
+              "[AddMiniApp] Failed to store notification token:",
+              tokenErr
+            );
+          }
+        }
+
+        // Successfully added - save to localStorage
+        localStorage.setItem("miniAppAdded", "true");
+        setSuccess(true);
+        setDismissed(true);
+        onClose?.();
+      } else {
+        // User cancelled or failed - show the manual prompt as fallback
+        console.log(
+          "[AddMiniApp] User cancelled or failed, showing manual prompt"
+        );
+        setIsAnimating(true);
+        setTimeout(() => setIsVisible(true), 50);
+      }
+    } catch (err) {
+      console.error("[AddMiniApp] Auto-trigger failed:", err);
+      // Show manual prompt as fallback
+      setIsAnimating(true);
+      setTimeout(() => setIsVisible(true), 50);
+    } finally {
+      setLoading(false);
+    }
+  }, [autoTriggered, loading, frameContext, onClose]);
+
   useEffect(() => {
-    // Don't show if already added or dismissed
+    // Don't do anything if already added or dismissed
     if (isAlreadyAdded || dismissed) {
       return;
     }
@@ -47,14 +128,13 @@ export function AddFramePrompt({ onClose }: AddFramePromptProps) {
       return;
     }
 
-    // Trigger slide-up animation after a short delay
+    // Auto-trigger the addMiniApp popup after a short delay
     const timer = setTimeout(() => {
-      setIsAnimating(true);
-      setTimeout(() => setIsVisible(true), 50);
+      triggerAddMiniApp();
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [isAlreadyAdded, dismissed]);
+  }, [isAlreadyAdded, dismissed, triggerAddMiniApp]);
 
   const handleAddFrame = useCallback(async (): Promise<void> => {
     setLoading(true);
