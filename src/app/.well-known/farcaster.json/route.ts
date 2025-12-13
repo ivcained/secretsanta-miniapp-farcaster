@@ -24,7 +24,7 @@ export async function GET() {
       requiredCapabilities: [
         "actions.ready",
         "actions.signIn",
-        "actions.openMiniApp",
+        "actions.addMiniApp",
         "actions.openUrl",
         "actions.sendToken",
         "actions.viewToken",
@@ -37,7 +37,7 @@ export async function GET() {
         "wallet.getEthereumProvider",
       ],
       requiredChains: ["eip155:8453", "eip155:10"],
-      canonicalDomain: "https://secretsanta.quest",
+      canonicalDomain: "secretsanta.quest",
       noindex: false,
       tags: ["santa", "secretsanta", "xmas", "christmas", "holidays"],
       primaryCategory: "entertainment",

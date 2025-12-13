@@ -214,7 +214,7 @@
     viem "^2.21.26"
     zod "^3.24.4"
 
-"@coinbase/onchainkit@^1.0.3":
+"@coinbase/onchainkit@^1.1.2":
   version "1.1.2"
   resolved "https://registry.npmjs.org/@coinbase/onchainkit/-/onchainkit-1.1.2.tgz"
   integrity sha512-QBH+u7wRYDBax/SNvXGPuLIJ0tAqq85tksUDervGrLRaghEUBZstmg6Qwqw1xMMsW1GNPyk8Wm0xxFqMUh26vg==
