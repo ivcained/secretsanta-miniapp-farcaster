@@ -1,4 +1,3 @@
-                                                                                                                                                                                                                                                                                                    
 "use client";
 
 import React, {
@@ -69,7 +68,8 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [authenticatedUser, setAuthenticatedUser] = useState<AuthenticatedUser | null>(null);
+  const [authenticatedUser, setAuthenticatedUser] =
+    useState<AuthenticatedUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isValidatingScore, setIsValidatingScore] = useState(false);
   const [isInFarcasterApp, setIsInFarcasterApp] = useState(false);
@@ -429,7 +429,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
             fid = verifyResult.fid;
             console.log("[Auth] FID from verification:", fid);
           } else {
-            console.error("[Auth] Verification failed or no FID:", verifyResult);
+            console.error(
+              "[Auth] Verification failed or no FID:",
+              verifyResult
+            );
           }
         } catch (verifyError) {
           console.error("[Auth] Verification error:", verifyError);
@@ -441,7 +444,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!fid) {
         try {
           const sdkContext = await sdk.context;
-          console.log("[Auth] SDK context:", JSON.stringify(sdkContext, null, 2));
+          console.log(
+            "[Auth] SDK context:",
+            JSON.stringify(sdkContext, null, 2)
+          );
           if (sdkContext?.user?.fid) {
             fid = sdkContext.user.fid;
             console.log("[Auth] FID from SDK context:", fid);
@@ -454,8 +460,71 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (!fid) {
         console.error("[Auth] Could not extract FID from any source");
         setError(
+          "Could not verify your Farcaster identity. Please try again or open this app in Warpcast."
+        );
+        setIsLoading(false);
+        return;
+      }
+
+      // Login with the FID and cryptographic auth data
+      await loginWithFid(fid, { signature, message });
+    } catch (err) {
+      console.error("[Auth] Sign-in error:", err);
+      setError(
+        `Sign-in failed: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsLoading(false);
     }
-  }, [auth.isAuthenticated]);
+  }, [context, loginWithFid, miniKitSignIn, isInFarcasterApp]);
+
+  // Sign out
+  const signOut = useCallback(() => {
+    setUser(null);
+    setAuthenticatedUser(null);
+    setError(null);
+    localStorage.removeItem("santa_chain_user");
+  }, []);
+
+  const value: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    isValidatingScore,
+    isInFarcasterApp,
+    isCheckingContext,
+    error,
+    signIn,
+    signOut,
+    validateScore,
+    refreshUser,
+    authenticatedUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// Hook to use auth context
+export function useAuth(): AuthContextType {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}
+
+// Hook to check if auth is ready (not loading and context check complete)
+export function useAuthReady(): AuthContextType & { isReady: boolean } {
+  const auth = useAuth();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    if (!auth.isCheckingContext && !auth.isLoading) {
+      setIsReady(true);
+    }
+  }, [auth.isCheckingContext, auth.isLoading]);
 
   return { ...auth, isReady };
 }
