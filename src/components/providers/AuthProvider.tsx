@@ -529,6 +529,20 @@ export function useAuthReady(): AuthContextType & { isReady: boolean } {
   return { ...auth, isReady };
 }
 
+// Hook to require authentication (redirects or shows error if not authenticated)
+export function useRequireAuth(): AuthContextType {
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (!auth.isCheckingContext && !auth.isLoading && !auth.isAuthenticated) {
+      // User is not authenticated after loading is complete
+      console.log("[Auth] User not authenticated, authentication required");
+    }
+  }, [auth.isCheckingContext, auth.isLoading, auth.isAuthenticated]);
+
+  return auth;
+}
+
 // Hook to require valid Neynar score
 export function useRequireValidScore(): AuthContextType & {
   canParticipate: boolean;
